@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var batchTask: Task<Void, Never>?
     private var engineTask: Task<[URL], Error>?
     private var cropWindow: CropWindowController?
+    private var cropPDFWindow: CropPDFWindowController?
     private var cropTask: Task<Void, Never>?
     private var adjustWindow: ImageAdjustWindowController?
     private var adjustTask: Task<Void, Never>?
@@ -100,6 +101,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentCompress(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--pdfcrop-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentCrop(for: [URL(fileURLWithPath: path)])
         }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
@@ -342,20 +349,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Crop
 
     private func presentCrop(for urls: [URL]) {
-        guard let input = urls.first, FileKind.detect(input) == .image else {
-            hud.fail("Crop is wired for images so far")
-            return
-        }
+        guard let input = urls.first else { return }
         // Reading the file is a sandboxed operation; make sure the home-folder
         // bookmark is active before the crop window loads it.
         _ = FolderAccess.shared.ensureAccess()
-        let controller = CropWindowController(url: input)
-        controller.onApply = { [weak self] rect in
-            self?.runCrop(input: input, rect: rect)
+
+        switch FileKind.detect(input) {
+        case .image:
+            let controller = CropWindowController(url: input)
+            controller.onApply = { [weak self] rect in
+                self?.runCrop(input: input, rect: rect)
+            }
+            cropWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+
+        case .pdf:
+            guard let controller = CropPDFWindowController(url: input) else {
+                hud.fail("Couldn’t open that PDF")
+                return
+            }
+            controller.onApply = { [weak self] spec in
+                self?.runPDFCrop(input: input, spec: spec)
+            }
+            cropPDFWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+
+        default:
+            hud.fail("Crop for this file type is next")
         }
-        cropWindow = controller
-        controller.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runPDFCrop(input: URL, spec: PDFCropSpec) {
+        let job = Job(inputs: [input], operation: .pdfCrop(spec))
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Cropping PDF", subtitle: "Preparing…")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await PDFCropEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(title: "Cropped PDF", subtitle: "All pages")
+                NSSound(named: "Glass")?.play()
+                Log.write("pdf crop done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("pdf crop failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: PDF merge + split

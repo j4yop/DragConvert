@@ -132,6 +132,21 @@ public struct PDFCompressSpec: Equatable, Sendable {
     }
 }
 
+public struct PDFCropSpec: Equatable, Sendable {
+    /// Normalised crop box, top-left origin, 0...1 relative to the page's media box.
+    public var x: Double
+    public var y: Double
+    public var width: Double
+    public var height: Double
+
+    public init(x: Double, y: Double, width: Double, height: Double) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
@@ -142,6 +157,7 @@ public enum JobOperation: Equatable, Sendable {
     case pdfSplit(PDFSplitSpec)
     case pdfOrganize(PDFOrganizeSpec)
     case pdfCompress(PDFCompressSpec)
+    case pdfCrop(PDFCropSpec)
     case tool(id: String)
 }
 
