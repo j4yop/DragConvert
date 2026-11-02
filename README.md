@@ -39,11 +39,12 @@ make log     # drag / hover / drop / job — with full output paths
 - **Annotate images** with the same text/shapes/ink tools as PDF
 - **Batch crop** one relative crop across a whole selection
 - **Collage** with grid, row, column and featured layouts
+- **PDF Add BG** to frame every page on a colour or image canvas
 - **Remove BG** via Vision’s on-device foreground mask → transparent PNG
 - **Read QR** and copy the decoded value or open its link
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
-- Atomic writes, collision naming, 40 unit tests
+- Atomic writes, collision naming, 41 unit tests
 
 Private repo: <https://github.com/j4yop/DragConvert>
 

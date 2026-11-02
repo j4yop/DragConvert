@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var compressTask: Task<Void, Never>?
     private var compressPDFWindow: CompressPDFWindowController?
     private var frameWindow: FrameImageWindowController?
+    private var framePDFWindow: FramePDFWindowController?
     private var frameTask: Task<Void, Never>?
     private var collageWindow: CollageImageWindowController?
     private var qrWindow: QRResultWindowController?
@@ -134,6 +135,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentRedact(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--pdfframe-demo"),
+           CommandLine.arguments.count > index + 1 {
+            presentFrame(for: [URL(fileURLWithPath: CommandLine.arguments[index + 1])])
         }
 
         if let index = CommandLine.arguments.firstIndex(of: "--qr-demo"),
@@ -1023,21 +1029,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Add background
 
     private func presentFrame(for urls: [URL]) {
-        guard let input = urls.first, FileKind.detect(input) == .image else {
-            hud.fail("Add BG is wired for images so far")
-            return
-        }
+        guard let input = urls.first else { return }
         _ = FolderAccess.shared.ensureAccess()
-        guard let controller = FrameImageWindowController(url: input) else {
-            hud.fail("Couldn’t open that image")
-            return
+
+        switch FileKind.detect(input) {
+        case .image:
+            guard let controller = FrameImageWindowController(url: input) else {
+                hud.fail("Couldn’t open that image")
+                return
+            }
+            controller.onApply = { [weak self] spec in
+                self?.runFrame(input: input, spec: spec)
+            }
+            frameWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+
+        case .pdf:
+            guard let controller = FramePDFWindowController(url: input) else {
+                hud.fail("Couldn’t open that PDF")
+                return
+            }
+            controller.onApply = { [weak self] spec in
+                self?.runPDFFrame(input: input, spec: spec)
+            }
+            framePDFWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+
+        default:
+            hud.fail("Add BG is wired for images and PDFs")
         }
-        controller.onApply = { [weak self] spec in
-            self?.runFrame(input: input, spec: spec)
+    }
+
+    private func runPDFFrame(input: URL, spec: PDFFrameSpec) {
+        let job = Job(inputs: [input], operation: .pdfFrame(spec))
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Framing PDF", subtitle: "Preparing…")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await PDFFrameEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(title: "Framed PDF", subtitle: "All pages")
+                NSSound(named: "Glass")?.play()
+                Log.write("pdf frame done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("pdf frame failed: \(error.localizedDescription)")
+            }
         }
-        frameWindow = controller
-        controller.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func runFrame(input: URL, spec: ImageFrameSpec) {

@@ -162,8 +162,7 @@ public enum Capabilities {
                 ("Metadata", "tag"),
                 ("Merge", "doc.on.doc"),
                 ("Organize", "rectangle.3.group"),
-                ("Split", "scissors"),
-                ("Edit", "slider.horizontal.3")
+                ("Split", "scissors")
             ])
         case .video:
             return make([

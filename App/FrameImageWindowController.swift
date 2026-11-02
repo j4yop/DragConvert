@@ -70,6 +70,8 @@ final class FrameImageWindowController: NSWindowController {
         imageView.layer?.cornerRadius = 10
         imageView.layer?.masksToBounds = true
         imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        imageView.setContentHuggingPriority(.defaultLow, for: .horizontal)
         imageView.heightAnchor.constraint(equalToConstant: 400).isActive = true
 
         paddingSlider.isContinuous = true

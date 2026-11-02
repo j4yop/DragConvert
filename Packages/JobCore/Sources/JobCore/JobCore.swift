@@ -339,6 +339,33 @@ public struct ImageCollageSpec: Equatable, Sendable {
     }
 }
 
+public struct PDFFrameSpec: Equatable, Sendable {
+    public enum Background: Equatable, Sendable {
+        case color(ImageColor)
+        case image(URL)
+    }
+
+    public var paddingPercent: Double
+    public var shadow: Bool
+    public var blurBackground: Bool
+    public var background: Background
+    public var dpi: Int
+
+    public init(
+        paddingPercent: Double = 0.12,
+        shadow: Bool = true,
+        blurBackground: Bool = false,
+        background: Background = .color(ImageColor(red: 0.96, green: 0.94, blue: 0.90)),
+        dpi: Int = 200
+    ) {
+        self.paddingPercent = paddingPercent
+        self.shadow = shadow
+        self.blurBackground = blurBackground
+        self.background = background
+        self.dpi = dpi
+    }
+}
+
 public struct ImageAnnotateSpec: Equatable, Sendable {
     public var annotations: [PDFAnnotationSpec]
     public var format: String
@@ -369,6 +396,7 @@ public enum JobOperation: Equatable, Sendable {
     case imageCropBatch(ImageCropBatchSpec)
     case imageCollage(ImageCollageSpec)
     case imageRemoveBG
+    case pdfFrame(PDFFrameSpec)
     case tool(id: String)
 }
 
