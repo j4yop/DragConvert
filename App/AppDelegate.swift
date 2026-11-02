@@ -32,6 +32,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var adjustTask: Task<Void, Never>?
     private var compressWindow: CompressWindowController?
     private var compressTask: Task<Void, Never>?
+    private var metadataWindow: MetadataWindowController?
+    private var metadataTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.write("launched")
@@ -70,6 +72,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentCompress(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--metadata-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentMetadata(for: [URL(fileURLWithPath: path)])
         }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
@@ -194,6 +202,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        if item.id == "tool:metadata" {
+            presentMetadata(for: urls)
+            return
+        }
+
         guard item.id.hasPrefix("convert:") else {
             NSSound.beep()
             Log.write("not implemented: \(item.id)")
@@ -306,6 +319,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cropWindow = controller
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: Metadata
+
+    private func presentMetadata(for urls: [URL]) {
+        guard let input = urls.first else { return }
+        guard FileKind.detect(input) == .image else {
+            hud.fail("Metadata for this file type is next")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+        let controller = MetadataWindowController(url: input)
+        controller.onStrip = { [weak self] in
+            self?.runStripMetadata(input: input)
+        }
+        metadataWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runStripMetadata(input: URL) {
+        let ext = ["jpg", "jpeg", "png", "heic", "tiff"]
+            .contains(input.pathExtension.lowercased())
+            ? input.pathExtension.lowercased()
+            : "jpg"
+        let spec = MetadataSpec(action: .strip, format: ext)
+        let job = Job(inputs: [input], operation: .metadata(spec))
+
+        hud.onCancel = { [weak self] in self?.metadataTask?.cancel() }
+        hud.show(title: "Stripping metadata", subtitle: "Preparing…")
+
+        metadataTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageMetadataEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(title: "Metadata removed", subtitle: "1 of 1 saved")
+                NSSound(named: "Glass")?.play()
+                Log.write("metadata strip done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("metadata strip failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: Compress

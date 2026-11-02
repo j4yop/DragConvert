@@ -98,7 +98,7 @@ Budgets: wheel ≤ 80 ms, idle CPU ≈ 0, 10 MB image ≤ 400 ms, PDF page ≤ 2
 | → Thu | **WHEEL-1b** appear motion + **S3** performance | “10 wedges at 120 fps, no leaks.” |
 | → Fri | **DRAG-2** mixed selection + demo | “A mixed selection tells me what to do.” |
 
-**Crop, resize, rotate and compress are done.** Crop has a draggable rect and aspect presets; resize/rotate share a live-preview window with lock-aspect fields; compress hits a target KB or quality and never inflates. Next: **metadata read/strip**, then PDF merge/split/organize, then crop polish (8 handles, editable W/H).
+**Crop, resize, rotate, compress and metadata are done.** Crop has a draggable rect and aspect presets; resize/rotate share a live-preview window with lock-aspect fields; compress hits a target KB or quality and never inflates; metadata lists file/image/camera/date/location fields and strips them into an upright clean copy. Next: **PDF merge, split, organize**, then crop polish (8 handles, editable W/H).
 
 **Blocked decision:** keyboard navigation (**WHEEL-2**) needs either Input Monitoring (listen-only event tap) or activating the panel (loses Finder focus). Decide in week 3; do not let it block the image tools.
 

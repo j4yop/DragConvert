@@ -70,11 +70,26 @@ public struct CompressSpec: Equatable, Sendable {
     }
 }
 
+public struct MetadataSpec: Equatable, Sendable {
+    public enum Action: String, Sendable {
+        case strip
+    }
+
+    public var action: Action
+    public var format: String
+
+    public init(action: Action, format: String) {
+        self.action = action
+        self.format = format
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
     case edit(ImageEditSpec)
     case compress(CompressSpec)
+    case metadata(MetadataSpec)
     case tool(id: String)
 }
 
