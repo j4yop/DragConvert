@@ -29,9 +29,10 @@ make log     # drag / hover / drop / job — with full output paths
 - **Resize + rotate/flip** with lock-aspect fields and a live preview
 - **Compress** to a target KB or quality %, iterative, never inflates
 - **Metadata** viewer (file, image, camera, dates, GPS) with one-click strip
+- **PDF merge** in selection order and **split** at pages or into equal parts
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
-- Atomic writes, collision naming, 20 unit tests
+- Atomic writes, collision naming, 23 unit tests
 
 Private repo: <https://github.com/j4yop/DragConvert>
 

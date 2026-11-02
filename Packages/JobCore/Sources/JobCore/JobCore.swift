@@ -84,12 +84,30 @@ public struct MetadataSpec: Equatable, Sendable {
     }
 }
 
+public struct PDFSplitSpec: Equatable, Sendable {
+    public enum Mode: String, Sendable {
+        case atPages, equalParts
+    }
+
+    public var mode: Mode
+    public var pages: [Int]
+    public var parts: Int
+
+    public init(mode: Mode, pages: [Int] = [], parts: Int = 2) {
+        self.mode = mode
+        self.pages = pages
+        self.parts = parts
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
     case edit(ImageEditSpec)
     case compress(CompressSpec)
     case metadata(MetadataSpec)
+    case pdfMerge
+    case pdfSplit(PDFSplitSpec)
     case tool(id: String)
 }
 

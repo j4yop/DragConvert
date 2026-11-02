@@ -34,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var compressTask: Task<Void, Never>?
     private var metadataWindow: MetadataWindowController?
     private var metadataTask: Task<Void, Never>?
+    private var splitWindow: SplitPDFWindowController?
+    private var pdfTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.write("launched")
@@ -78,6 +80,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentMetadata(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--split-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentSplit(for: [URL(fileURLWithPath: path)])
         }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
@@ -207,6 +215,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        if item.id == "tool:merge" {
+            runMerge(urls)
+            return
+        }
+
+        if item.id == "tool:split" {
+            presentSplit(for: urls)
+            return
+        }
+
         guard item.id.hasPrefix("convert:") else {
             NSSound.beep()
             Log.write("not implemented: \(item.id)")
@@ -319,6 +337,80 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cropWindow = controller
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: PDF merge + split
+
+    private func runMerge(_ urls: [URL]) {
+        let pdfs = urls.filter { FileKind.detect($0) == .pdf }
+        guard pdfs.count >= 2 else {
+            hud.fail("Select at least two PDFs to merge")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+
+        let job = Job(inputs: pdfs, operation: .pdfMerge)
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Merging PDFs", subtitle: "\(pdfs.count) files")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await PDFMergeEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Merged \(pdfs.count) PDFs",
+                    subtitle: "\(outputs.count) file saved"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("merge done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("merge failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func presentSplit(for urls: [URL]) {
+        guard let input = urls.first, FileKind.detect(input) == .pdf else {
+            hud.fail("Split is wired for PDFs so far")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+        let controller = SplitPDFWindowController(url: input)
+        controller.onApply = { [weak self] spec in
+            self?.runSplit(input: input, spec: spec)
+        }
+        splitWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runSplit(input: URL, spec: PDFSplitSpec) {
+        let job = Job(inputs: [input], operation: .pdfSplit(spec))
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Splitting PDF", subtitle: "Preparing…")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await PDFSplitEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Split into \(outputs.count) parts",
+                    subtitle: "Saved in a new folder"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("split done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("split failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: Metadata

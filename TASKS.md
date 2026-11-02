@@ -7,7 +7,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | | Done | Target |
 |---|---|---|
 | Conversion paths | 9 | ~270 |
-| Tools | 5 (crop, resize, rotate, compress, metadata) | 26 |
+| Tools | 7 (crop, resize, rotate, compress, metadata, merge, split) | 26 |
 | File actions | 0 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
 | Unit tests | 8 | 120+ |
@@ -37,6 +37,8 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **IMG-2 · Resize + rotate** — “Adjust Image” window: W/H px with lock aspect, 90° left/right, flip H/V, live preview, Reset/Apply; writes “Resized”, “Rotated” or “Edited”; 4 engine tests
 - [x] **IMG-3 · Compress to target size** — target KB or quality %, iterative JPEG/HEIC search, optional downscale, never inflates, copies when already smaller; 3 engine tests
 - [x] **IMG-6 · Metadata read + strip** — table of file/image/camera/dates/location fields, GPS warning, “Strip Metadata” writes an upright clean copy; 3 tests
+- [x] **PDF-1 · Merge** — selection order preserved, page count is the sum, output “<first> Merged.pdf”; engine test
+- [x] **PDF-2 · Split** — at page numbers or equal parts, outputs to “<name> Split/part N.pdf”; 2 engine tests
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -61,11 +63,11 @@ does not reliably receive `performDragOperation`.
 - [ ] **IMG-1b · Batch crop** — 0.5d
   Acceptance: 5 images → crop panel for the first, same rect applied to all 5, outputs “<name> Cropped.jpg”.
 
-- [ ] **PDF-1 · Merge PDFs** — 1d ← next
-  Acceptance: select 3 PDFs → one merged PDF in Finder selection order, page count is the sum, originals untouched.
+- [ ] **PDF-3 · Organize pages** — 2d ← next
+  Acceptance: thumbnail grid, drag to reorder, rotate/duplicate/remove a page, save as a new PDF.
 
-- [ ] **PDF-2 · Split PDF** — 1d
-  Acceptance: split at custom points or into equal parts; every part lands in one folder with a clear name.
+- [ ] **PDF-4 · Compress PDF to target size** — 2d
+  Acceptance: downsample images and recompress to a KB target; report the achieved size.
 
 - [ ] **IMG-8 · Crop panel polish** — 1d
   Acceptance: 8 handles (edges too), editable W/H fields, 0.5 s open for a 50 MP image.
@@ -84,10 +86,6 @@ does not reliably receive `performDragOperation`.
 - [ ] **IMG-7** Read QR — 0.5d
 
 ### PDF
-- [ ] **PDF-1** Merge (selection order + reorder) — 1d
-- [ ] **PDF-2** Split (ranges / equal parts) — 1d
-- [ ] **PDF-3** Organize pages (reorder/rotate/duplicate/remove) — 2d
-- [ ] **PDF-4** Compress to target size — 2d
 - [ ] **PDF-5** Crop (crop/media box) — 0.5d
 - [ ] **PDF-6** Images → PDF — 1d
 - [ ] **PDF-7** Annotate — 3d

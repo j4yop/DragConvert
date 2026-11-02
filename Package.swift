@@ -35,7 +35,8 @@ let package = Package(
             dependencies: [
                 .product(name: "CapabilityGraph", package: "CapabilityGraph"),
                 .product(name: "JobCore", package: "JobCore"),
-                .product(name: "ImageEngine", package: "ImageEngine")
+                .product(name: "ImageEngine", package: "ImageEngine"),
+                .product(name: "PDFEngine", package: "PDFEngine")
             ],
             path: "Tests/DragConvertTests"
         )
