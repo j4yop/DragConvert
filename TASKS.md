@@ -44,7 +44,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **PDF-5 · Crop** — draggable box on page 1, aspect presets, applies the same normalised crop to every page; 2 engine tests
 - [x] **PDF-6 · Images → PDF** — multi-image drop on the convert wheel’s PDF target builds one PDF, one page per image in selection order; engine test
 - [x] **PDF-7 · Annotate PDF** — text, rect, ellipse, arrow, ink, colour well, page navigation, undo, saves “<name> Annotated.pdf”; engine test
-- [x] **PDF-8 · Redact PDF** — draw boxes, rasterise + black out, aircraft-grade content removal (no selectable text survives), saves “<name> Redacted.pdf”; test proves text is gone
+- [x] **PDF-8 · Redact PDF** — draw boxes, rasterise + black out, true content removal (no selectable text survives), saves “<name> Redacted.pdf”; test proves text is gone
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
