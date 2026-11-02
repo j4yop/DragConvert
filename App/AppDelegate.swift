@@ -134,6 +134,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             presentRedact(for: [URL(fileURLWithPath: path)])
         }
 
+        if let index = CommandLine.arguments.firstIndex(of: "--removebg-demo"),
+           CommandLine.arguments.count > index + 1 {
+            runRemoveBG(input: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
+        }
+
         if let index = CommandLine.arguments.firstIndex(of: "--collage-demo") {
             let paths = CommandLine.arguments[(index + 1)...]
                 .filter { !$0.hasPrefix("--") }
@@ -319,6 +324,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if item.id == "tool:collage" {
             presentCollage(for: urls)
+            return
+        }
+
+        if item.id == "tool:removebg" {
+            guard let input = urls.first, FileKind.detect(input) == .image else {
+                hud.fail("Remove BG is wired for images so far")
+                return
+            }
+            runRemoveBG(input: input)
             return
         }
 
@@ -886,6 +900,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.hud.fail(error.friendlyMessage)
                 NSSound.beep()
                 Log.write("metadata strip failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: Remove background
+
+    private func runRemoveBG(input: URL) {
+        _ = FolderAccess.shared.ensureAccess()
+        let job = Job(inputs: [input], operation: .imageRemoveBG)
+        hud.onCancel = { [weak self] in self?.cropTask?.cancel() }
+        hud.show(title: "Removing background", subtitle: "On-device")
+
+        cropTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageRemoveBGEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Background removed",
+                    subtitle: "Transparent PNG"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("remove bg done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("remove bg failed: \(error.localizedDescription)")
             }
         }
     }

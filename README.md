@@ -39,6 +39,7 @@ make log     # drag / hover / drop / job — with full output paths
 - **Annotate images** with the same text/shapes/ink tools as PDF
 - **Batch crop** one relative crop across a whole selection
 - **Collage** with grid, row, column and featured layouts
+- **Remove BG** via Vision’s on-device foreground mask → transparent PNG
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
 - Atomic writes, collision naming, 39 unit tests

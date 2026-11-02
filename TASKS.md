@@ -7,7 +7,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | | Done | Target |
 |---|---|---|
 | Conversion paths | 9 | ~270 |
-| Tools | 14 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate img+PDF, redact img+PDF, add BG image, collage) | 26 |
+| Tools | 15 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate img+PDF, redact img+PDF, add BG image, collage, remove BG) | 26 |
 | File actions | 0 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
 | Unit tests | 8 | 120+ |
@@ -52,6 +52,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **IMG-11 · Annotate images** — text, rect, ellipse, arrow, ink, colour, undo, flattened export; engine test
 - [x] **IMG-1b · Batch crop** — one relative crop applied to every selected image, each output beside its source; engine test
 - [x] **IMG-12 · Collage** — grid/row/column/featured layouts, spacing, rounded corners, background, live preview; engine test
+- [x] **IMG-13 · Remove background** — Vision foreground instance mask, transparent PNG, on-device; verified on a real portrait (alpha 0 corners, 255 subject)
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -76,8 +77,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **IMG-13 · Remove background** — 1.5d ← next
-  Acceptance: lift the subject with Vision’s foreground mask and export a transparent PNG; original untouched.
+- [ ] **IMG-14 · Read QR** — 0.5d ← next
+  Acceptance: decode a QR code from an image, show the text in a copyable panel; no network.
 
 ---
 

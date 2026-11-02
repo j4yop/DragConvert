@@ -147,9 +147,9 @@ public enum Capabilities {
                 ("Annotate", "pencil.and.outline"),
                 ("Add BG", "photo"),
                 ("Redact", "eye.slash"),
+                ("Remove BG", "person.crop.circle"),
                 ("Metadata", "tag"),
-                ("Collage", "square.grid.2x2"),
-                ("Edit", "slider.horizontal.3")
+                ("Collage", "square.grid.2x2")
             ])
         case .pdf:
             return make([

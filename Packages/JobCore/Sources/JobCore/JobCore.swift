@@ -368,6 +368,7 @@ public enum JobOperation: Equatable, Sendable {
     case imageAnnotate(ImageAnnotateSpec)
     case imageCropBatch(ImageCropBatchSpec)
     case imageCollage(ImageCollageSpec)
+    case imageRemoveBG
     case tool(id: String)
 }
 
