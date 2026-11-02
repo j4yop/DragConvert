@@ -16,9 +16,38 @@ public struct CropSpec: Equatable, Sendable {
     }
 }
 
+public struct ImageEditSpec: Equatable, Sendable {
+    public var width: Int
+    public var height: Int
+    public var quarterTurns: Int
+    public var flipHorizontal: Bool
+    public var flipVertical: Bool
+    public var format: String
+    public var suffix: String
+
+    public init(
+        width: Int,
+        height: Int,
+        quarterTurns: Int = 0,
+        flipHorizontal: Bool = false,
+        flipVertical: Bool = false,
+        format: String,
+        suffix: String
+    ) {
+        self.width = width
+        self.height = height
+        self.quarterTurns = quarterTurns
+        self.flipHorizontal = flipHorizontal
+        self.flipVertical = flipVertical
+        self.format = format
+        self.suffix = suffix
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
+    case edit(ImageEditSpec)
     case tool(id: String)
 }
 

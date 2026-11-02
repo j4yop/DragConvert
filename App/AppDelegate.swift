@@ -28,6 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var engineTask: Task<[URL], Error>?
     private var cropWindow: CropWindowController?
     private var cropTask: Task<Void, Never>?
+    private var adjustWindow: ImageAdjustWindowController?
+    private var adjustTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.write("launched")
@@ -54,6 +56,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentCrop(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--adjust-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentAdjust(for: [URL(fileURLWithPath: path)], mode: .resize)
         }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
@@ -162,6 +170,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if item.id == "tool:crop" {
             presentCrop(for: urls)
+            return
+        }
+
+        if item.id == "tool:resize" || item.id == "tool:rotate" {
+            presentAdjust(
+                for: urls,
+                mode: item.id == "tool:resize" ? .resize : .rotate
+            )
             return
         }
 
@@ -277,6 +293,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cropWindow = controller
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: Resize + rotate
+
+    private func presentAdjust(
+        for urls: [URL],
+        mode: ImageAdjustWindowController.Mode
+    ) {
+        guard let input = urls.first, FileKind.detect(input) == .image else {
+            hud.fail("Resize and rotate are wired for images so far")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+        guard let controller = ImageAdjustWindowController(url: input, mode: mode) else {
+            hud.fail("Couldn’t open that image")
+            return
+        }
+        controller.onApply = { [weak self] spec in
+            self?.runAdjust(input: input, spec: spec)
+        }
+        adjustWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runAdjust(input: URL, spec: ImageEditSpec) {
+        let job = Job(inputs: [input], operation: .edit(spec))
+        let verb: String
+        switch spec.suffix {
+        case "Resized": verb = "Resizing"
+        case "Rotated": verb = "Rotating"
+        default: verb = "Editing"
+        }
+
+        hud.onCancel = { [weak self] in self?.adjustTask?.cancel() }
+        hud.show(title: verb, subtitle: "Preparing…")
+
+        adjustTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageEditEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(title: "\(spec.suffix) image", subtitle: "1 of 1 saved")
+                NSSound(named: "Glass")?.play()
+                Log.write("adjust done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("adjust failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     private func runCrop(input: URL, rect: CGRect) {
