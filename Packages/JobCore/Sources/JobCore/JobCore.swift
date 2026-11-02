@@ -100,6 +100,24 @@ public struct PDFSplitSpec: Equatable, Sendable {
     }
 }
 
+public struct PDFPageEdit: Equatable, Sendable {
+    public var sourceIndex: Int
+    public var rotation: Int // extra quarter turns, 0...3
+
+    public init(sourceIndex: Int, rotation: Int = 0) {
+        self.sourceIndex = sourceIndex
+        self.rotation = rotation
+    }
+}
+
+public struct PDFOrganizeSpec: Equatable, Sendable {
+    public var pages: [PDFPageEdit]
+
+    public init(pages: [PDFPageEdit]) {
+        self.pages = pages
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
@@ -108,6 +126,7 @@ public enum JobOperation: Equatable, Sendable {
     case metadata(MetadataSpec)
     case pdfMerge
     case pdfSplit(PDFSplitSpec)
+    case pdfOrganize(PDFOrganizeSpec)
     case tool(id: String)
 }
 

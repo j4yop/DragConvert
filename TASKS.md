@@ -7,7 +7,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | | Done | Target |
 |---|---|---|
 | Conversion paths | 9 | ~270 |
-| Tools | 7 (crop, resize, rotate, compress, metadata, merge, split) | 26 |
+| Tools | 8 (crop, resize, rotate, compress, metadata, merge, split, organize) | 26 |
 | File actions | 0 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
 | Unit tests | 8 | 120+ |
@@ -39,6 +39,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **IMG-6 · Metadata read + strip** — table of file/image/camera/dates/location fields, GPS warning, “Strip Metadata” writes an upright clean copy; 3 tests
 - [x] **PDF-1 · Merge** — selection order preserved, page count is the sum, output “<first> Merged.pdf”; engine test
 - [x] **PDF-2 · Split** — at page numbers or equal parts, outputs to “<name> Split/part N.pdf”; 2 engine tests
+- [x] **PDF-3 · Organize pages** — thumbnail grid, drag to reorder, rotate/duplicate/delete, saves “<name> Organized.pdf”; 2 engine tests
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -63,11 +64,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **IMG-1b · Batch crop** — 0.5d
   Acceptance: 5 images → crop panel for the first, same rect applied to all 5, outputs “<name> Cropped.jpg”.
 
-- [ ] **PDF-3 · Organize pages** — 2d ← next
-  Acceptance: thumbnail grid, drag to reorder, rotate/duplicate/remove a page, save as a new PDF.
-
-- [ ] **PDF-4 · Compress PDF to target size** — 2d
-  Acceptance: downsample images and recompress to a KB target; report the achieved size.
+- [ ] **PDF-4 · Compress PDF to target size** — 2d ← next
+  Acceptance: downsample images and recompress to a KB target; report the achieved size; never inflate.
 
 - [ ] **IMG-8 · Crop panel polish** — 1d
   Acceptance: 8 handles (edges too), editable W/H fields, 0.5 s open for a 50 MP image.

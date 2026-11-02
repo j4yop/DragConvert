@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var metadataWindow: MetadataWindowController?
     private var metadataTask: Task<Void, Never>?
     private var splitWindow: SplitPDFWindowController?
+    private var organizeWindow: OrganizePDFWindowController?
     private var pdfTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -86,6 +87,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentSplit(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--organize-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentOrganize(for: [URL(fileURLWithPath: path)])
         }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
@@ -222,6 +229,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if item.id == "tool:split" {
             presentSplit(for: urls)
+            return
+        }
+
+        if item.id == "tool:organize" {
+            presentOrganize(for: urls)
             return
         }
 
@@ -386,6 +398,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         splitWindow = controller
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func presentOrganize(for urls: [URL]) {
+        guard let input = urls.first, FileKind.detect(input) == .pdf else {
+            hud.fail("Organize is wired for PDFs so far")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+        guard let controller = OrganizePDFWindowController(url: input) else {
+            hud.fail("Couldn’t open that PDF")
+            return
+        }
+        controller.onApply = { [weak self] spec in
+            self?.runOrganize(input: input, spec: spec)
+        }
+        organizeWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runOrganize(input: URL, spec: PDFOrganizeSpec) {
+        let job = Job(inputs: [input], operation: .pdfOrganize(spec))
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Organizing PDF", subtitle: "Preparing…")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await PDFOrganizeEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Page order saved",
+                    subtitle: "\(spec.pages.count) pages"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("organize done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("organize failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     private func runSplit(input: URL, spec: PDFSplitSpec) {
