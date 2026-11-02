@@ -158,6 +158,7 @@ public enum JobOperation: Equatable, Sendable {
     case pdfOrganize(PDFOrganizeSpec)
     case pdfCompress(PDFCompressSpec)
     case pdfCrop(PDFCropSpec)
+    case pdfFromImages
     case tool(id: String)
 }
 

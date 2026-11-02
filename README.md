@@ -30,9 +30,10 @@ make log     # drag / hover / drop / job — with full output paths
 - **Compress** to a target KB or quality %, iterative, never inflates
 - **Metadata** viewer (file, image, camera, dates, GPS) with one-click strip
 - **PDF merge** in selection order, **split** at pages or equal parts, **organize** with a thumbnail grid, **compress** Balanced or to a target KB, **crop** all pages from one drag
+- **Images → PDF** by dropping a multi-image selection on the convert wheel’s PDF target
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
-- Atomic writes, collision naming, 30 unit tests
+- Atomic writes, collision naming, 31 unit tests
 
 Private repo: <https://github.com/j4yop/DragConvert>
 

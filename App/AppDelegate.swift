@@ -261,6 +261,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let target = String(item.id.dropFirst("convert:".count))
         let files = urls
 
+        // Multiple images onto PDF means "build one PDF", not "one PDF each".
+        if target.lowercased() == "pdf",
+           files.count > 1,
+           files.allSatisfy({ FileKind.detect($0) == .image }) {
+            runImagesToPDF(files)
+            return
+        }
+
         batchTask?.cancel()
         engineTask?.cancel()
 
@@ -404,6 +412,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: PDF merge + split
+
+    private func runImagesToPDF(_ images: [URL]) {
+        _ = FolderAccess.shared.ensureAccess()
+        let job = Job(inputs: images, operation: .pdfFromImages)
+
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Creating PDF", subtitle: "\(images.count) images")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await PDFFromImagesEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Created PDF",
+                    subtitle: "\(images.count) pages"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("images to pdf done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("images to pdf failed: \(error.localizedDescription)")
+            }
+        }
+    }
 
     private func runMerge(_ urls: [URL]) {
         let pdfs = urls.filter { FileKind.detect($0) == .pdf }
