@@ -42,6 +42,11 @@ public struct ImageConvertEngine: Engine {
         return [output]
     }
 
+    public static func loadImage(at url: URL) -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        return loadFullSizeImage(from: source)
+    }
+
     static func loadFullSizeImage(from source: CGImageSource) -> CGImage? {
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
         let width = properties?[kCGImagePropertyPixelWidth] as? Int ?? 0

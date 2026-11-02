@@ -7,7 +7,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | | Done | Target |
 |---|---|---|
 | Conversion paths | 9 | ~270 |
-| Tools | 0 | 26 |
+| Tools | 1 (crop) | 26 |
 | File actions | 0 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
 | Unit tests | 8 | 120+ |
@@ -33,6 +33,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **CORE-2 · Batch selections** — one HUD, per-file “N of M”, stops on error, cancel
 - [x] **CORE-3 · Error surfacing** — friendly mapping for permission, disk full, missing file
 - [x] **WHEEL-1a · Hover haptics** — alignment feedback on wedge change
+- [x] **IMG-1 · Crop panel** — image preview, dark scrim, 4 corner handles, aspect presets, live W/H px, Reset/Apply, writes “<name> Cropped.<ext>”; engine covered by 2 tests
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -54,11 +55,14 @@ does not reliably receive `performDragOperation`.
 - [ ] **WHEEL-2 · Keyboard navigation** — 1d
   **Blocked on a decision:** a non-activating panel cannot receive key events while Finder owns the drag. Options: (a) request Input Monitoring and use a listen-only event tap, (b) activate the panel (loses Finder focus), (c) skip keyboard in v1. Recommend (a), decided in week 3.
 
-- [ ] **IMG-1 · Crop panel** — 2d ← next hero feature
-  Acceptance: 5184×3456 JPEG → 1:1 → 1600×1600, saved as “<name> Cropped.jpg”, original untouched, works on 5 files.
+- [ ] **IMG-1b · Batch crop** — 0.5d
+  Acceptance: 5 images → crop panel for the first, same rect applied to all 5, outputs “<name> Cropped.jpg”.
 
-- [ ] **IMG-2 · Resize + rotate** — 1d
+- [ ] **IMG-2 · Resize + rotate** — 1d ← next
   Acceptance: 50 % resize and 90° rotate, EXIF orientation preserved.
+
+- [ ] **IMG-8 · Crop panel polish** — 1d
+  Acceptance: 8 handles (edges too), editable W/H fields, 0.5 s open for a 50 MP image.
 
 ---
 

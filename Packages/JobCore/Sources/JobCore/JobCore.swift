@@ -1,7 +1,24 @@
 import Foundation
 
+public struct CropSpec: Equatable, Sendable {
+    public let x: Int
+    public let y: Int
+    public let width: Int
+    public let height: Int
+    public let format: String
+
+    public init(x: Int, y: Int, width: Int, height: Int, format: String) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.format = format
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
+    case crop(CropSpec)
     case tool(id: String)
 }
 

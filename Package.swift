@@ -34,7 +34,8 @@ let package = Package(
             name: "DragConvertTests",
             dependencies: [
                 .product(name: "CapabilityGraph", package: "CapabilityGraph"),
-                .product(name: "JobCore", package: "JobCore")
+                .product(name: "JobCore", package: "JobCore"),
+                .product(name: "ImageEngine", package: "ImageEngine")
             ],
             path: "Tests/DragConvertTests"
         )

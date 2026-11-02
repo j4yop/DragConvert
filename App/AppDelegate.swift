@@ -26,6 +26,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let hud = HUDController()
     private var batchTask: Task<Void, Never>?
     private var engineTask: Task<[URL], Error>?
+    private var cropWindow: CropWindowController?
+    private var cropTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.write("launched")
@@ -46,6 +48,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 self.hud.succeed(title: "Converted to JPG", subtitle: "1 of 1 saved")
             }
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--crop-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentCrop(for: [URL(fileURLWithPath: path)])
         }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
@@ -152,6 +160,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Log.write("perform \(item.id) on \(urls.count) file(s)")
 
+        if item.id == "tool:crop" {
+            presentCrop(for: urls)
+            return
+        }
+
         guard item.id.hasPrefix("convert:") else {
             NSSound.beep()
             Log.write("not implemented: \(item.id)")
@@ -244,6 +257,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .pdf: return PDFToImageEngine()
         case .image: return ImageConvertEngine()
         default: return nil
+        }
+    }
+
+    // MARK: Crop
+
+    private func presentCrop(for urls: [URL]) {
+        guard let input = urls.first, FileKind.detect(input) == .image else {
+            hud.fail("Crop is wired for images so far")
+            return
+        }
+        // Reading the file is a sandboxed operation; make sure the home-folder
+        // bookmark is active before the crop window loads it.
+        _ = FolderAccess.shared.ensureAccess()
+        let controller = CropWindowController(url: input)
+        controller.onApply = { [weak self] rect in
+            self?.runCrop(input: input, rect: rect)
+        }
+        cropWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runCrop(input: URL, rect: CGRect) {
+        let ext = ["jpg", "jpeg", "png", "heic", "tiff"]
+            .contains(input.pathExtension.lowercased())
+            ? input.pathExtension.lowercased()
+            : "jpg"
+        let spec = CropSpec(
+            x: Int(rect.minX),
+            y: Int(rect.minY),
+            width: Int(rect.width),
+            height: Int(rect.height),
+            format: ext
+        )
+        let job = Job(inputs: [input], operation: .crop(spec))
+
+        hud.onCancel = { [weak self] in self?.cropTask?.cancel() }
+        hud.show(title: "Cropping", subtitle: "Preparing…")
+
+        cropTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageCropEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(title: "Cropped", subtitle: "1 of 1 saved")
+                NSSound(named: "Glass")?.play()
+                Log.write("crop done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("crop failed: \(error.localizedDescription)")
+            }
         }
     }
 
