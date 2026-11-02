@@ -18,11 +18,29 @@ This copies the signed bundle to `/Applications/DragConvert.app`, registers it
 with LaunchServices, imports it into Spotlight, and removes the development
 bundle so search shows one copy with the wheel icon.
 
+## Homebrew release
+
+The public tap is `j4yop/homebrew-tap` and the cask is `Casks/dragconvert.rb`.
+For each release:
+
+1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Config/Info.plist`.
+2. `make bundle`
+3. `ditto -c -k --keepParent build/DragConvert.app build/DragConvert-<version>.zip`
+4. `shasum -a 256 build/DragConvert-<version>.zip`
+5. Create the GitHub release and upload the zip as `DragConvert-<version>.zip`.
+6. Update `j4yop/homebrew-tap/Casks/dragconvert.rb` with the version and SHA-256.
+
+Install:
+
+```bash
+brew trust j4yop/tap && brew install --cask j4yop/tap/dragconvert
+```
+
 ## What is already wired
 
 - **App icon:** `Config/AppIcon.icns`, generated from `Config/AppIcon-1024.png` by `scripts/make-icon.swift`. The bundle script copies it into `Contents/Resources`.
 - **Menu-bar template icon:** drawn in code by `App/StatusIcon.swift`; macOS tints it for light/dark menu bars and the busy state uses the accent colour.
-- **About / privacy / licences:** `About DragConvert` in the menu bar shows the version, the MIT licence, the local-only privacy statement, and links to the GitHub repository, releases and licence.
+- **About / privacy / licences:** `About DragConvert` in the menu bar shows the version, the GPL-3.0 licence, the local-only privacy statement, and links to the GitHub repository, releases and licence.
 - **Update path:** `Check for Updates…` opens the GitHub releases page in the browser. This keeps the app itself free of a network entitlement. If we later add Sparkle or App Store updates, update this section and the privacy copy together.
 - **Version:** `Config/Info.plist` (`CFBundleShortVersionString`, `CFBundleVersion`). Bump both for every user-visible release.
 - **Sandbox:** `Config/DragConvert.entitlements` has app sandbox, user-selected read/write and app-scoped bookmarks. No network entitlement.
@@ -59,7 +77,7 @@ The project already uses App Sandbox and user-selected file access, which is the
 6. The app already includes `Config/PrivacyInfo.xcprivacy` (no tracking, no collected data, no accessed-API declarations). Keep it in the target resources.
 7. Archive, upload, and use TestFlight before release.
 
-**Do not add StoreKit or a paywall.** DragConvert is MIT-licensed and free.
+**Do not add StoreKit or a paywall.** DragConvert is GPL-3.0-only and free. The source is the corresponding source for every binary release.
 
 ## Release checklist
 

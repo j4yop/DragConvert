@@ -155,7 +155,7 @@ I return the diff, test output, a manual QA checklist and any plan updates.
 | D4 | FFmpeg LGPL-only for A/V | Yes |
 | D5 | macOS 13+ | Yes |
 | D6 | Core launch ~week 15, parity ~week 26 | Yes |
-| D7 | MIT open source; no paywall, trial, or account | Yes |
+| D7 | GPL-3.0-only, no paywall, trial, or account | Yes |
 | D8 | Ad-hoc signing now, $99 at distribution | No |
 | D9 | Capability graph is derived from working engines; no failing wedges | No |
 

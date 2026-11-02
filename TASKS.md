@@ -60,7 +60,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **ONB-2 · Folder access + finish setup** — permission button, toggle, open-source copy
 - [x] **ACT-1 · Actions wheel** — AirDrop, Float shelf (drag-out rows), Copy, Move, Copy Path, Terminal; transfer engine test
 - [x] **APP-1 · Settings** — wheel shortcut pickers, sound, reveal in Finder, conflict policy (rename/replace), launch at login; persisted and applied live
-- [x] **OPEN-1 · Free and open source** — removed the StoreKit trial/paywall; MIT licence; onboarding and Settings say free, no limits
+- [x] **OPEN-1 · Free and open source** — removed the StoreKit trial/paywall; GPL-3.0 licence; onboarding and Settings say free, no limits
 - [x] **TRUTH-1 · Truthful capability graph** — conversion wedges are filtered by real engines; tools are filtered by format and selection; unsupported families show a note instead of a failing action
 - [x] **WHEEL-5 · Sticky wheel** — release the modifier and keep dragging; the wheel stays until drop/Escape; tested with a simulated drag
 - [x] **WHEEL-6 · Centre preview** — dragged-file thumbnail, filename, size pill, rounded petals, hover colour and scale/fade appearance

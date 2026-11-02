@@ -3,7 +3,9 @@
 **Date:** 3 November 2026  
 **Question:** DragConvert is a free MIT macOS 13+ app with a strong core drag-wheel but only images/PDF implemented. It currently advertises many formats it cannot convert. What is the highest-leverage plan to become a credible alternative to Tangerine 2.0.2 without trying to match all 275 paths at once? Identify the P0 gaps, what to hide/fix/build first, and where DragConvert can beat Tangerine rather than merely catch up.
 
-**Method:** Deep research dossier; five independent advisors with distinct lenses; two anonymous peer reviews; chairman synthesis. The dossier is in [`TANGERINE-RESEARCH-DOSSIER.md`](TANGERINE-RESEARCH-DOSSIER.md); the full gap report is in [`TANGERINE-GAP-REPORT.md`](TANGERINE-GAP-REPORT.md).
+**Method:** Deep research dossier; five independent advisors with distinct lenses; two anonymous peer reviews; chairman synthesis.
+
+> **Licensing note (3 November 2026, after this transcript):** DragConvert was relicensed from MIT to **GPL-3.0-only** at version 0.4.0. References to MIT in the historical advisor text below describe the earlier state. The dossier is in [`TANGERINE-RESEARCH-DOSSIER.md`](TANGERINE-RESEARCH-DOSSIER.md); the full gap report is in [`TANGERINE-GAP-REPORT.md`](TANGERINE-GAP-REPORT.md).
 
 ---
 

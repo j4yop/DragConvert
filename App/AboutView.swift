@@ -3,8 +3,8 @@ import SwiftUI
 
 struct AboutView: View {
     private var version: String {
-        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "3"
+        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.0"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "5"
         return "Version \(short) (\(build))"
     }
 
@@ -32,7 +32,7 @@ struct AboutView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Label("No network entitlement — files stay on this Mac", systemImage: "wifi.slash")
-                Label("MIT licensed, no account, no telemetry", systemImage: "checkmark.seal")
+                Label("GPL-3.0 licensed, no account, no telemetry", systemImage: "checkmark.seal")
                 Label("Images and PDF today; more families on the roadmap", systemImage: "clock")
             }
             .font(.system(size: 11.5))
@@ -41,7 +41,7 @@ struct AboutView: View {
             HStack(spacing: 8) {
                 link("GitHub", "https://github.com/j4yop/DragConvert")
                 link("Updates", "https://github.com/j4yop/DragConvert/releases")
-                link("MIT Licence", "https://github.com/j4yop/DragConvert/blob/main/LICENSE")
+                link("GPL-3.0 Licence", "https://github.com/j4yop/DragConvert/blob/main/LICENSE")
             }
             .padding(.top, 2)
 

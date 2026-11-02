@@ -17,7 +17,7 @@ Reference: **Tangerine: File Converter** (LEAP STUDIO, macOS 13+, $29.99, v2.0.2
 7. **Sandbox from day one** + home-folder security-scoped bookmark.
 8. **Parity target:** 9 families, ~270 paths, 26 tools, 6 actions. See `PARITY.md`.
 9. **Two tracks:** core launch ~week 15, full parity ~week 26 solo.
-10. **Free and open source (MIT).** No trial, no purchase, no account.
+10. **Free and open source (GPL-3.0).** No trial, no purchase, no account.
 
 ---
 
@@ -196,11 +196,11 @@ No network entitlement. No file names in telemetry. Temp files `0600`, removed o
 | Sheets | OOXML/ODS/BIFF + libxlsxwriter |
 | A/V | AVFoundation + VideoToolbox + FFmpeg (LGPL) |
 | Archives | libarchive |
-| Licensing | MIT (app); no StoreKit, no purchase flow |
+| Licensing | GPL-3.0-only (app); no StoreKit, no purchase flow |
 | Updates | App Store / Sparkle 2 |
 | CI | GitHub Actions macOS, `swift test` |
 
-DragConvert itself is MIT. Dependencies: MIT/BSD for libwebp, libavif, resvg, libarchive, libxlsxwriter, ZIPFoundation; LGPL-2.1 for FFmpeg; never AGPL.
+DragConvert itself is GPL-3.0-only. Dependencies: MIT/BSD for libwebp, libavif, resvg, libarchive, libxlsxwriter, ZIPFoundation; LGPL-2.1 for FFmpeg; never AGPL.
 
 ---
 
@@ -278,7 +278,7 @@ scripts/              bundle + fixtures
 | 6 | 120 Hz glass jank | Static gradient fallback |
 | 7 | Filenames with emoji/RTL | Middle truncation + corpus |
 | 8 | iCloud materialisation stalls | `startDownloadingUbiquitousItem` + timeout |
-| 9 | Paywall creep | MIT licence + no StoreKit dependency |
+| 9 | Paywall creep | GPL-3.0 licence + no StoreKit dependency |
 | 10 | Project loss | Git + remote backup after every session |
 
 **Red team:** native is required (drag), LibreOffice is not viable (700 MB), cloud/AI breaks the privacy promise, 60 correct paths beat 275 half-tested ones.

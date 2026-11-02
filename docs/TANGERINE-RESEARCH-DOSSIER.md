@@ -7,7 +7,7 @@
 
 ## 1. Context and constraints
 
-- **DragConvert** is a free, MIT-licensed macOS 13+ menu-bar app. Native Swift 6 + SwiftUI + AppKit. Sandboxed, ad-hoc signed, no network entitlement. 46 tests. Repo: `github.com/j4yop/DragConvert`.
+- **DragConvert** is a free, GPL-3.0-licensed macOS 13+ menu-bar app. Native Swift 6 + SwiftUI + AppKit. Sandboxed, ad-hoc signed, no network entitlement. 46 tests. Repo: `github.com/j4yop/DragConvert`.
 - Core interaction: drag a file in Finder, hold a modifier, a radial wheel appears at the pointer, drop on a wedge, output is written beside the original.
 - Three modes: Convert (⇧ Shift), Tools (currently ⇧⌘ Option+Command), Actions (⌃ Control).
 - Current implementation is images and PDF only. Most other families are advertised in the capability graph but have no engine.
@@ -90,7 +90,7 @@
 - **Tangerine** is polished but paid and Apple-silicon-only. Weaknesses reported by reviewers: $29.99, micro-lag on an M1 when opening the wheel, invisible-tool discoverability, feature depth unproven.
 - **OpenShelf** is a free MIT competitor (`github.com/Manan-Santoki/OpenShelf`, macOS 14+) with sticky wheels, mixed selections, many formats, tools, shelves, Sparkle updates, and optional FFmpeg/LibreOffice/Pandoc installs. It is ahead of DragConvert on breadth and core wheel behavior, but requires macOS 14 and optional dependencies.
 - **Open-Tangerine** is an early GPL-3.0 project, not a complete replacement.
-- DragConvert's potential advantages: macOS 13+, simpler native app, no account/telemetry, MIT, likely lower memory/latency, and the ability to beat Tangerine on accessibility and transparent open-source development.
+- DragConvert's potential advantages: macOS 13+, simpler native app, no account/telemetry, GPL-3.0, likely lower memory/latency, and the ability to beat Tangerine on accessibility and transparent open-source development.
 
 ## 6. Evidence
 

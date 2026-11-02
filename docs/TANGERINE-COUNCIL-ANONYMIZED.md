@@ -1,3 +1,5 @@
+> **Licensing note:** this is the historical council input. DragConvert was relicensed from MIT to GPL-3.0-only at 0.4.0; MIT references below describe the earlier state.
+
 # Council — anonymized advisor responses
 
 Do not infer the author's identity from the label. Evaluate the arguments only.

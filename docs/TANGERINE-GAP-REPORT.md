@@ -10,7 +10,7 @@
 
 ## Bottom line
 
-DragConvert has a genuinely good core: a native, sandboxed, keyboard-navigable drag wheel that writes beside the original and runs locally. It is also now free and MIT-licensed, which is a real advantage over Tangerine's $29.99 one-time price.
+DragConvert has a genuinely good core: a native, sandboxed, keyboard-navigable drag wheel that writes beside the original and runs locally. It is also now free and GPL-3.0-licensed, which is a real advantage over Tangerine's $29.99 one-time price.
 
 But it is **not yet a credible Tangerine alternative on breadth**, and more importantly, **the wheel currently promises conversions it cannot perform**. That is the first thing to fix.
 
@@ -25,7 +25,7 @@ The honest state:
 | Actions | 6, fully shipped | 6, Copy/Terminal semantics wrong | 🟠 Mostly there |
 | Core wheel behavior | Sticky, selection-aware, thumbnail/size | Hides on key release, flat, filename only | 🔴 Core UX gap |
 | Packaging | App Store, icon, notarized, updates | ad-hoc, no icon/notarization/updates | 🔴 Not shippable |
-| Price | $29.99, 20-file trial | Free, MIT, no limits | 🟢 Ahead |
+| Price | $29.99, 20-file trial | Free, GPL-3.0, no limits | 🟢 Ahead |
 | OS / chip | macOS 13+, Apple silicon only | macOS 13+; source can support Intel | 🟢 Potential edge |
 | Privacy | Local, policy promise | Local, no network entitlement | 🟢 Auditable edge |
 
@@ -224,14 +224,14 @@ These are more damaging than missing features because they break trust at the mo
 
 These are real advantages or cheap opportunities, not consolation prizes.
 
-- **Free and MIT.** Tangerine is $29.99 with a 20-file trial; DragConvert has no paywall, no account, no limits. OpenShelf is also free/MIT, so this is necessary but not sufficient.
+- **Free and GPL-3.0.** Tangerine is $29.99 with a 20-file trial; DragConvert has no paywall, no account, no limits. OpenShelf is also free/MIT, so this is necessary but not sufficient.
 - **macOS 13+ and potentially Intel.** Tangerine requires Apple silicon. A universal build widens the audience and is a credible differentiator.
 - **Auditable privacy.** DragConvert has no network entitlement at all. Tangerine's privacy is a policy promise; ours is visible in the signed bundle. Keep it that way, and make the update mechanism explicit if we add one (Sparkle needs a network entitlement, which would weaken this claim).
 - **Latency.** MacGeneration reported micro-lags on an M1 when Tangerine's wheel opens. A 60 Hz polled wheel with a simple native panel can potentially feel faster. Benchmark it; if true, make it a headline.
 - **Keyboard-first / accessibility.** Tangerine's App Store page says no accessibility features indicated. DragConvert already supports 1–9, arrows, Return, Escape. Add VoiceOver labels and a Finder-selection path.
-- **Automation.** Shortcuts actions, AppleScript, URL scheme, CLI, watch folders. Tangerine is GUI-only; OpenShelf is GUI+keyboard. A scriptable free MIT app is a different product.
+- **Automation.** Shortcuts actions, AppleScript, URL scheme, CLI, watch folders. Tangerine is GUI-only; OpenShelf is GUI+keyboard. A scriptable free GPL-3.0 app is a different product.
 - **Truthful capability graph.** If the wheel is generated from the engine registry, it structurally cannot lie. That is a trust feature no competitor markets.
-- **Open development.** Public roadmap, issues, tests, MIT contributions. Tangerine is closed.
+- **Open development.** Public roadmap, issues, tests, GPL-3.0 contributions. Tangerine is closed.
 - **No external runtime required for the current features.** OpenShelf optionally installs FFmpeg/LibreOffice/Pandoc; DragConvert's current image/PDF stack is native. Keep the base app small and make extras optional.
 
 ---
@@ -352,7 +352,7 @@ Five independent advisors reviewed the dossier. The consensus was unusually stro
 - PDF→PPTX/XLSX high-fidelity layout reconstruction — the fidelity will be poor and the maintenance is high.
 - Bundled LibreOffice — 600 MB, sandbox-hostile, licence and update burden.
 - A 275-path graph maintained by hand — derive it from engines instead.
-- A paywall — the app is MIT and free; keep it that way.
+- A paywall — the app is GPL-3.0 and free; keep it that way.
 
 ---
 
@@ -386,4 +386,4 @@ That is a product people can trust. The current 270-wedge graph is not.
 
 ---
 
-*Research note: Tangerine's website and press kit are v1.4; the App Store build is v2.0.2. Where they disagree, this report treats the shipping app and its release notes as authoritative. The $29.99 price and 20-file trial are Tangerine's, not DragConvert's; DragConvert is free and MIT-licensed.*
+*Research note: Tangerine's website and press kit are v1.4; the App Store build is v2.0.2. Where they disagree, this report treats the shipping app and its release notes as authoritative. The $29.99 price and 20-file trial are Tangerine's, not DragConvert's; DragConvert is free and GPL-3.0-licensed.*

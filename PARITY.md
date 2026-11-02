@@ -16,7 +16,7 @@ Legend: **✅** shipped · **➕** planned · **⚠️** fidelity caveat · **�
 | File tools | 26 (22 generic + 4 PDF variants) | 26 advertised + 8 extras | 17 implementations + PDF text/OCR |
 | File actions | 6 | 6 | 6; Copy and Terminal now match |
 | File families | 9 | 9 | 2 (images, PDF) |
-| Price | $29.99 one-time, 20-file trial | Free and open source (MIT), no limits | Free, MIT |
+| Price | $29.99 one-time, 20-file trial | Free and open source (GPL-3.0), no limits | Free, GPL-3.0 |
 
 ---
 

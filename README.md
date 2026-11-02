@@ -6,11 +6,11 @@
 
 <p align="center">
   <strong>Convert, edit, and manipulate files mid-drag from a radial wheel directly at your cursor.</strong><br>
-  100% free, open-source (MIT), local-first, and lightning fast. No subscriptions, no telemetry, no cloud uploads.
+  100% free, open-source (GPL-3.0), local-first, and lightning fast. No subscriptions, no telemetry, no cloud uploads.
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="MIT License" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square" alt="GPL-3.0 License" /></a>
   <a href="https://apple.com/macos"><img src="https://img.shields.io/badge/macOS-13.0%2B-black.svg?style=flat-square&logo=apple" alt="macOS 13+" /></a>
   <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-6.0-orange.svg?style=flat-square&logo=swift" alt="Swift 6" /></a>
   <a href="#"><img src="https://img.shields.io/badge/architecture-Universal%20(M--series%20%2B%20Intel)-6f42c1.svg?style=flat-square" alt="Universal Binary" /></a>
@@ -113,7 +113,7 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 
 | Feature | DragConvert | Tangerine ($29.99) | Cloud Converters |
 | :--- | :---: | :---: | :---: |
-| **Price** | **Free & Open Source (MIT)** | $29.99 (20-file trial) | Subscription / Ad-supported |
+| **Price** | **Free & Open Source (GPL-3.0)** | $29.99 (20-file trial) | Subscription / Ad-supported |
 | **Privacy** | **100% Local (0 Network Entitlement)** | Policy promise | Uploaded to remote servers |
 | **Latency** | **< 80 ms (Hardware Accelerated)** | Micro-lags reported | Depends on upload/download speed |
 | **Interaction** | **Radial Wheel + Keyboard (1–9)** | Radial Wheel | Drag into browser tab |
@@ -125,9 +125,23 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 
 ## Installation
 
-### Option 1: Quick Install (Recommended)
+### Option 1: Homebrew (Recommended)
 
-Clone the repository and install the signed application bundle directly to `/Applications`:
+On **Homebrew 7**, trust the tap once and install:
+
+```bash
+brew trust j4yop/tap && brew install --cask j4yop/tap/dragconvert
+```
+
+On older Homebrew versions this is enough:
+
+```bash
+brew install --cask j4yop/tap/dragconvert
+```
+
+The cask installs `DragConvert.app` into `/Applications` and clears the quarantine flag automatically, so you can open it right away. If macOS still asks for confirmation, use **System Settings → Privacy & Security → Open Anyway** once.
+
+### Option 2: Build From Source
 
 ```bash
 git clone https://github.com/j4yop/DragConvert.git ~/Developer/DragConvert
@@ -135,9 +149,13 @@ cd ~/Developer/DragConvert
 make install
 ```
 
-`make install` builds the app, signs it with entitlements, installs it to `/Applications/DragConvert.app`, and refreshes macOS LaunchServices so the orange wheel icon appears immediately in Spotlight and Launchpad.
+`make install` builds the app, signs it with entitlements, installs it to `/Applications/DragConvert.app`, and refreshes macOS LaunchServices so the orange wheel icon appears in Spotlight and Launchpad.
 
-### Option 2: Run Development Build
+### Option 3: Manual Download
+
+Download the latest `DragConvert-*.zip` from [Releases](https://github.com/j4yop/DragConvert/releases), unzip it, and drag `DragConvert.app` into `/Applications`. The build is ad-hoc signed, not notarized; on first launch use **System Settings → Privacy & Security → Open Anyway** if macOS blocks it.
+
+### Development Build
 
 ```bash
 make run
@@ -205,4 +223,6 @@ See [PLAN.md](PLAN.md), [PARITY.md](PARITY.md), [TASKS.md](TASKS.md), and [docs/
 
 Contributions, bug reports, and PRs are warmly welcomed! Please read [WORKFLOW.md](WORKFLOW.md) for our code standards, test fixtures, and quality gates.
 
-DragConvert is distributed under the **[MIT License](LICENSE)**. Free for everyone, forever.
+DragConvert is free software, distributed under the **[GNU General Public License v3.0](LICENSE)** (GPL-3.0-only). You can use, study, share, and modify it; redistributed versions must remain free under the same licence. The complete corresponding source is this repository.
+
+Relicensed from MIT to GPL-3.0 at **0.4.0**.

@@ -223,7 +223,7 @@ struct OnboardingView: View {
                 .font(.system(size: 10.5, weight: .medium))
                 .foregroundStyle(.white.opacity(0.78))
 
-            Text("MIT licensed · everything runs on this Mac")
+            Text("GPL-3.0 licensed · everything runs on this Mac")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.55))
         }
