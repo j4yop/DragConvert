@@ -79,7 +79,7 @@ public struct WheelItem: Identifiable, Equatable, Sendable {
 // MARK: - The graph
 
 public enum Capabilities {
-    public static let maxWedges = 10
+    public static let maxWedges = 12
 
     public static func items(
         mode: WheelMode,
@@ -149,7 +149,8 @@ public enum Capabilities {
                 ("Redact", "eye.slash"),
                 ("Remove BG", "person.crop.circle"),
                 ("Metadata", "tag"),
-                ("Collage", "square.grid.2x2")
+                ("Collage", "square.grid.2x2"),
+                ("Read QR", "qrcode")
             ])
         case .pdf:
             return make([

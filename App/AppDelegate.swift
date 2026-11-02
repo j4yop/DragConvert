@@ -37,6 +37,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var frameWindow: FrameImageWindowController?
     private var frameTask: Task<Void, Never>?
     private var collageWindow: CollageImageWindowController?
+    private var qrWindow: QRResultWindowController?
+    private var qrTask: Task<Void, Never>?
     private var metadataWindow: MetadataWindowController?
     private var metadataTask: Task<Void, Never>?
     private var splitWindow: SplitPDFWindowController?
@@ -132,6 +134,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentRedact(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--qr-demo"),
+           CommandLine.arguments.count > index + 1 {
+            runReadQR(input: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
         }
 
         if let index = CommandLine.arguments.firstIndex(of: "--removebg-demo"),
@@ -324,6 +331,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if item.id == "tool:collage" {
             presentCollage(for: urls)
+            return
+        }
+
+        if item.id == "tool:readqr" {
+            guard let input = urls.first, FileKind.detect(input) == .image else {
+                hud.fail("Read QR is wired for images so far")
+                return
+            }
+            runReadQR(input: input)
             return
         }
 
@@ -901,6 +917,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSSound.beep()
                 Log.write("metadata strip failed: \(error.localizedDescription)")
             }
+        }
+    }
+
+    // MARK: Read QR
+
+    private func runReadQR(input: URL) {
+        _ = FolderAccess.shared.ensureAccess()
+        hud.onCancel = { [weak self] in self?.qrTask?.cancel() }
+        hud.show(title: "Reading QR", subtitle: "On-device")
+
+        qrTask = Task { @MainActor [weak self] in
+            let values = await Task.detached(priority: .userInitiated) {
+                QRCodeReader.decode(at: input)
+            }.value
+
+            guard let self else { return }
+            self.hud.hide()
+            if values.isEmpty { NSSound.beep() }
+
+            let controller = QRResultWindowController(
+                values: values, source: input
+            )
+            self.qrWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            Log.write("qr read \(values.count)")
         }
     }
 
