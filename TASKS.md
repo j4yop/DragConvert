@@ -7,7 +7,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | | Done | Target |
 |---|---|---|
 | Conversion paths | 9 | ~270 |
-| Tools | 16 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate img+PDF, redact img+PDF, add BG img+PDF, collage, remove BG, read QR) | 26 |
+| Tools | 17 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate img+PDF, redact img+PDF, add BG img+PDF, collage, remove BG, read QR, edit photo) | 26 |
 | File actions | 0 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
 | Unit tests | 8 | 120+ |
@@ -55,6 +55,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **IMG-13 · Remove background** — Vision foreground instance mask, transparent PNG, on-device; verified on a real portrait (alpha 0 corners, 255 subject)
 - [x] **IMG-14 · Read QR** — Vision barcode decode, copyable result panel, Open Link for a URL; generated-QR test
 - [x] **PDF-9 · Add background to PDF** — frame every page on a colour or image canvas with padding and shadow, export a new PDF; engine test
+- [x] **IMG-15 · Photo editor** — brightness, contrast, saturation and warmth sliders, live preview, exported copy; 2 engine tests
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -79,8 +80,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **IMG-15 · Photo editor** — 2d ← next
-  Acceptance: brightness, contrast, saturation and warmth sliders with a live preview, export a copy as PNG/JPG.
+- [ ] **ONB-1 · 5-step onboarding** — 2d ← next
+  Acceptance: capsule window matching the reference, animated wheel demo, Shift/⌥⌘/⌃ keycaps, folder access and finish-setup pages, page dots.
 
 ---
 

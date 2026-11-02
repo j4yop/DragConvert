@@ -38,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var framePDFWindow: FramePDFWindowController?
     private var frameTask: Task<Void, Never>?
     private var collageWindow: CollageImageWindowController?
+    private var photoEditorWindow: PhotoEditorWindowController?
     private var qrWindow: QRResultWindowController?
     private var qrTask: Task<Void, Never>?
     private var metadataWindow: MetadataWindowController?
@@ -135,6 +136,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentRedact(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--edit-demo"),
+           CommandLine.arguments.count > index + 1 {
+            presentPhotoEditor(for: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
         }
 
         if let index = CommandLine.arguments.firstIndex(of: "--pdfframe-demo"),
@@ -337,6 +343,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if item.id == "tool:collage" {
             presentCollage(for: urls)
+            return
+        }
+
+        if item.id == "tool:edit" {
+            guard let input = urls.first, FileKind.detect(input) == .image else {
+                hud.fail("Edit is wired for images so far")
+                return
+            }
+            presentPhotoEditor(for: input)
             return
         }
 
@@ -922,6 +937,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.hud.fail(error.friendlyMessage)
                 NSSound.beep()
                 Log.write("metadata strip failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: Photo editor
+
+    private func presentPhotoEditor(for input: URL) {
+        _ = FolderAccess.shared.ensureAccess()
+        guard let controller = PhotoEditorWindowController(url: input) else {
+            hud.fail("Couldn’t open that image")
+            return
+        }
+        controller.onApply = { [weak self] spec in
+            self?.runAdjustImage(input: input, spec: spec)
+        }
+        photoEditorWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runAdjustImage(input: URL, spec: ImageAdjustSpec) {
+        let job = Job(inputs: [input], operation: .imageAdjust(spec))
+        hud.onCancel = { [weak self] in self?.cropTask?.cancel() }
+        hud.show(title: "Editing photo", subtitle: "Preparing…")
+
+        cropTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageAdjustEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(title: "Edited image", subtitle: "1 of 1 saved")
+                NSSound(named: "Glass")?.play()
+                Log.write("edit done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("edit failed: \(error.localizedDescription)")
             }
         }
     }

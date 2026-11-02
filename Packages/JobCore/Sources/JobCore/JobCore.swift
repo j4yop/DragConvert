@@ -366,6 +366,28 @@ public struct PDFFrameSpec: Equatable, Sendable {
     }
 }
 
+public struct ImageAdjustSpec: Equatable, Sendable {
+    public var brightness: Double
+    public var contrast: Double
+    public var saturation: Double
+    public var warmth: Double
+    public var format: String
+
+    public init(
+        brightness: Double = 0,
+        contrast: Double = 0,
+        saturation: Double = 0,
+        warmth: Double = 0,
+        format: String = "png"
+    ) {
+        self.brightness = brightness
+        self.contrast = contrast
+        self.saturation = saturation
+        self.warmth = warmth
+        self.format = format
+    }
+}
+
 public struct ImageAnnotateSpec: Equatable, Sendable {
     public var annotations: [PDFAnnotationSpec]
     public var format: String
@@ -397,6 +419,7 @@ public enum JobOperation: Equatable, Sendable {
     case imageCollage(ImageCollageSpec)
     case imageRemoveBG
     case pdfFrame(PDFFrameSpec)
+    case imageAdjust(ImageAdjustSpec)
     case tool(id: String)
 }
 

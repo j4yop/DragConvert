@@ -150,7 +150,8 @@ public enum Capabilities {
                 ("Remove BG", "person.crop.circle"),
                 ("Metadata", "tag"),
                 ("Collage", "square.grid.2x2"),
-                ("Read QR", "qrcode")
+                ("Read QR", "qrcode"),
+                ("Edit", "slider.horizontal.3")
             ])
         case .pdf:
             return make([
