@@ -199,6 +199,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        if let index = CommandLine.arguments.firstIndex(of: "--shelf-demo") {
+            let paths = CommandLine.arguments[(index + 1)...]
+                .filter { !$0.hasPrefix("--") }
+                .map { URL(fileURLWithPath: $0) }
+            ShelfController.shared.add(Array(paths))
+        }
+
         if let index = CommandLine.arguments.firstIndex(of: "--onboarding-demo") {
             let page = index + 1 < CommandLine.arguments.count
                 ? (Int(CommandLine.arguments[index + 1]) ?? 0)
@@ -223,6 +230,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "How it works…", action: #selector(showWelcome), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Grant Folder Access…", action: #selector(grantFolderAccess), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Reveal Last Result", action: #selector(revealLast), keyEquivalent: "r"))
+        menu.addItem(NSMenuItem(title: "Shelf", action: #selector(toggleShelf), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit DragConvert", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         item.menu = menu
@@ -315,6 +323,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         lastPerform = (key, Date())
 
         Log.write("perform \(item.id) on \(urls.count) file(s)")
+
+        if item.id.hasPrefix("action:") {
+            performAction(item, on: urls)
+            return
+        }
 
         if item.id == "tool:crop" {
             presentCrop(for: urls)
@@ -494,6 +507,112 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSSound(named: "Glass")?.play()
             Log.write("batch done \(outputs.map(\.path))")
         }
+    }
+
+    // MARK: File actions
+
+    private func performAction(_ item: WheelItem, on urls: [URL]) {
+        switch item.id {
+        case "action:airdrop":
+            guard let service = NSSharingService(named: .sendViaAirDrop) else {
+                hud.fail("AirDrop isn’t available")
+                return
+            }
+            service.perform(withItems: urls)
+            Log.write("airdrop \(urls.count) items")
+
+        case "action:float":
+            ShelfController.shared.add(urls)
+            hud.succeed(
+                title: "Added to shelf",
+                subtitle: urls.count == 1 ? urls[0].lastPathComponent : "\(urls.count) items"
+            )
+
+        case "action:copy", "action:move":
+            chooseDestination(for: urls, moving: item.id == "action:move")
+
+        case "action:copypath":
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(
+                urls.map(\.path).joined(separator: "\n"),
+                forType: .string
+            )
+            hud.succeed(
+                title: "Path copied",
+                subtitle: urls.count == 1 ? urls[0].lastPathComponent : "\(urls.count) paths"
+            )
+
+        case "action:terminal":
+            openTerminal(for: urls)
+
+        default:
+            hud.fail("\(item.title) isn’t built yet")
+        }
+    }
+
+    private func chooseDestination(for urls: [URL], moving: Bool) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = moving ? "Move Here" : "Copy Here"
+        panel.message = moving
+            ? "Choose a folder to move the selection into."
+            : "Choose a folder to copy the selection into."
+
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+
+        let count = urls.count
+        hud.onCancel = { [weak self] in self?.cropTask?.cancel() }
+        hud.show(title: moving ? "Moving" : "Copying", subtitle: "\(count) items")
+
+        cropTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try FileActions.transfer(urls, to: destination, moving: moving)
+                }.value
+                self?.hud.succeed(
+                    title: moving ? "Moved" : "Copied",
+                    subtitle: outputs.isEmpty ? "Already in that folder" : "\(outputs.count) items"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("\(moving ? "move" : "copy") done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("\(moving ? "move" : "copy") failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func openTerminal(for urls: [URL]) {
+        guard let first = urls.first else { return }
+        var isDirectory: ObjCBool = false
+        let exists = FileManager.default.fileExists(
+            atPath: first.path, isDirectory: &isDirectory
+        )
+        let folder = (exists && isDirectory.boolValue)
+            ? first
+            : first.deletingLastPathComponent()
+
+        guard let terminal = NSWorkspace.shared.urlForApplication(
+            withBundleIdentifier: "com.apple.Terminal"
+        ) else {
+            NSWorkspace.shared.open(folder)
+            return
+        }
+        NSWorkspace.shared.open(
+            [folder],
+            withApplicationAt: terminal,
+            configuration: NSWorkspace.OpenConfiguration()
+        ) { _, error in
+            if let error { Log.write("terminal: \(error.localizedDescription)") }
+        }
+        Log.write("terminal at \(folder.path)")
+    }
+
+    @objc private func toggleShelf() {
+        ShelfController.shared.toggle()
     }
 
     private func engine(for input: URL) -> Engine? {

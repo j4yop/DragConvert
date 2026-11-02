@@ -58,6 +58,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **IMG-15 · Photo editor** — brightness, contrast, saturation and warmth sliders, live preview, exported copy; 2 engine tests
 - [x] **ONB-1 · 5-step onboarding** — capsule window, animated wheel highlight, Shift/⌥⌘/⌃ keycaps, folder access, launch at login, Done; page dots
 - [x] **ONB-2 · Folder access + finish setup** — permission button, toggle, trial copy
+- [x] **ACT-1 · Actions wheel** — AirDrop, Float shelf (drag-out rows), Copy, Move, Copy Path, Terminal; transfer engine test
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -82,8 +83,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **ACT-1 · Actions wheel** — 2d ← next
-  Acceptance: AirDrop, Float shelf, Copy, Move, Copy Path and Terminal work from the Control wheel on files and folders.
+- [ ] **APP-1 · Settings** — 2d ← next
+  Acceptance: shortcut capture, sound toggle, reveal-on-finish, and conflict policy (replace/rename/ask); persisted and applied live.
 
 ---
 
@@ -131,10 +132,6 @@ does not reliably receive `performDragOperation`.
 - [ ] **VID-7** Save frames — 1d
 - [ ] **VID-8** Redact — 3d
 - [ ] **ARC-1** Archives — 1d
-- [ ] **ACT-1** AirDrop — 0.5d
-- [ ] **ACT-2** Float shelf — 2d
-- [ ] **ACT-3** Copy / Move — 1d
-- [ ] **ACT-4** Copy Path / Terminal — 0.5d
 
 ---
 

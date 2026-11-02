@@ -44,9 +44,10 @@ make log     # drag / hover / drop / job — with full output paths
 - **Read QR** and copy the decoded value or open its link
 - **Edit photos** with brightness, contrast, saturation and warmth + live preview
 - **5-step capsule onboarding** with wheel demo, folder access and launch at login
+- **File actions**: AirDrop, Float shelf, Copy, Move, Copy Path, Terminal
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
-- Atomic writes, collision naming, 43 unit tests
+- Atomic writes, collision naming, 44 unit tests
 
 Private repo: <https://github.com/j4yop/DragConvert>
 
