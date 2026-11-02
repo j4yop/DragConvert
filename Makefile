@@ -2,12 +2,13 @@ APP_NAME := DragConvert
 BUNDLE   := build/$(APP_NAME).app
 LOG      := $(HOME)/Library/Containers/com.dragconvert.app/Data/Library/Logs/dragconvert.log
 
-.PHONY: help build test run bundle sign generate open clean convert log notarize icon
+.PHONY: help build test run bundle install sign generate open clean convert log notarize icon
 
 help:
 	@echo "make build      Build the SwiftPM package"
 	@echo "make test       Run unit tests"
 	@echo "make run        Build, bundle, sign, launch"
+	@echo "make install    Build and install to /Applications"
 	@echo "make log        Show the app's drag/conversion log"
 	@echo "make open       Open the Xcode project (needs xcodegen)"
 	@echo "make convert file=<path> to=<ext>"
@@ -29,6 +30,21 @@ run: bundle
 	@-pkill -f "$(APP_NAME).app/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true
 	@sleep 0.3
 	open $(BUNDLE)
+
+install: bundle
+	@-pkill -f "$(APP_NAME).app/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true
+	@sleep 0.3
+	@rm -rf "/Applications/$(APP_NAME).app"
+	@ditto "$(BUNDLE)" "/Applications/$(APP_NAME).app"
+	@codesign --verify --deep --strict "/Applications/$(APP_NAME).app"
+	@/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "/Applications/$(APP_NAME).app"
+	@mdimport -f "/Applications/$(APP_NAME).app" 2>/dev/null || true
+	@touch "/Applications/$(APP_NAME).app"
+	@-killall Finder 2>/dev/null || true
+	@-killall Dock 2>/dev/null || true
+	@-killall iconservicesagent 2>/dev/null || true
+	@rm -rf "$(BUNDLE)"
+	@echo "Installed /Applications/$(APP_NAME).app"
 
 log:
 	@cat "$(LOG)" 2>/dev/null || echo "No log yet — run 'make run' and try a drag."

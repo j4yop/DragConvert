@@ -7,7 +7,16 @@ make run        # build + bundle + launch
 make bundle     # build + bundle only
 ```
 
-The bundle lives at `build/DragConvert.app`.
+The bundle lives at `build/DragConvert.app`. To install the current build for
+normal use and Spotlight search:
+
+```bash
+make install
+```
+
+This copies the signed bundle to `/Applications/DragConvert.app`, registers it
+with LaunchServices, imports it into Spotlight, and removes the development
+bundle so search shows one copy with the wheel icon.
 
 ## What is already wired
 

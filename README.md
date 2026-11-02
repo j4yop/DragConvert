@@ -7,12 +7,16 @@ Every conversion runs locally on your Mac.
 
 **Status: the core loop works.** A sandboxed app sees a Finder drag, shows the wheel, and writes the converted file beside the original.
 
-## Run
+## Install
 
 ```bash
 cd ~/Developer/DragConvert
-make run
+make install
 ```
+
+Installs the signed bundle at `/Applications/DragConvert.app` and refreshes
+LaunchServices, so Spotlight and Launchpad show the orange wheel icon. The
+development loop (`make run`) runs from `build/` instead of installing.
 
 Drag a file in Finder, hold **⇧**, move the pointer outward to a wedge, release.
 
@@ -82,7 +86,9 @@ Source: <https://github.com/j4yop/DragConvert> · Licence: [MIT](LICENSE)
 
 ```bash
 make test
-make run
+make install   # /Applications/DragConvert.app, refreshed in Spotlight
+make run       # development build in build/
+make icon      # regenerate Config/AppIcon.icns
 make log
 make convert file="/path/Page 001.pdf" to=jpg
 make open      # needs: brew install xcodegen

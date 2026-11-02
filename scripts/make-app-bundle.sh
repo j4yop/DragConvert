@@ -22,4 +22,8 @@ codesign --force --sign - \
   --entitlements "$ROOT/Config/DragConvert.entitlements" \
   "$BUNDLE"
 
+# Keep the development bundle out of Spotlight; the installed copy in
+# /Applications is the one people should find.
+touch "$ROOT/build/.metadata_never_index"
+
 echo "Built and ad-hoc signed: $BUNDLE"
