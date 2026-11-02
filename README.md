@@ -76,4 +76,4 @@ make open      # needs: brew install xcodegen
 
 ## Next
 
-App icon and packaging, then audio/video with the free LGPL build of FFmpeg.
+A “truthful wheel” release: hide formats with no engine, make the wheel sticky, fix the ⇧⌥ shortcut and Copy action, add the centre preview, then app icon/packaging. After that: WebP/AVIF, PDF OCR/PDF-A, and optional FFmpeg. The full audit is in [`docs/TANGERINE-GAP-REPORT.md`](docs/TANGERINE-GAP-REPORT.md).

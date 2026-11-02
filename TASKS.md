@@ -68,6 +68,42 @@ does not reliably receive `performDragOperation`.
 
 ---
 
+## AUDIT — 3 November 2026
+
+Full report: `docs/TANGERINE-GAP-REPORT.md`. The wheel currently advertises
+formats with no engine. Fix truth before breadth.
+
+### P0 — truthful wheel (about 1 week)
+- [ ] **TRUTH-1 · Truthful capability graph** — 1–2d ← next
+  Acceptance: every wedge/tool offered has a working engine and a test; unsupported families are hidden or shown as “not yet,” never as a failing action.
+- [ ] **WHEEL-5 · Sticky wheel** — 2–4d
+  Acceptance: release the modifier and keep dragging; the wheel stays until drop/Escape; another mode key switches wheels.
+- [ ] **WHEEL-6 · Centre preview + motion** — 1–2d
+  Acceptance: dragged-file thumbnail, size pill, scale/fade appear; Reduce Motion respected.
+- [ ] **ACT-5 · Copy + terminal semantics** — 1d
+  Acceptance: Copy puts file URLs on the clipboard; terminal picker supports Terminal and iTerm2.
+- [ ] **DRAG-3 · Mixed selections + kinds** — 2–3d
+  Acceptance: HEIC+PNG → JPG works; GIF is video; PPTX is slides; RTFD/text clipping recognized; mixed tools show the intersection.
+- [ ] **PKG-0 · Product gate** — 3–5d
+  Acceptance: app icon, menu-bar template icon, version, notarization/update policy, privacy and licence screens.
+
+### P1 — image/PDF depth (2–3 weeks)
+- [ ] **IMG-16 · WebP/AVIF/SVG** — 3–5d
+- [ ] **PDF-10 · OCR + PDF/A-2b** — 1–2wk
+- [ ] **IMG-17 · Metadata editor** — 3–5d
+- [ ] **IMG-18 · Photo editor depth** — 1wk
+- [ ] **IMG-19 · Annotate/redact depth** — 1wk
+- [ ] **PDF-11 · Compress/organize polish** — 3–5d
+
+### P2 — optional media/documents (4–6 weeks)
+- [ ] **MEDIA-1 · Optional FFmpeg provider** — 2–3wk
+- [ ] **DOC-1 · Optional Pandoc/LibreOffice provider** — 2–3wk
+- [ ] **AUTO-1 · Finder selection + Shortcuts/CLI** — 1–2wk
+
+**Do not build:** bundled LibreOffice, high-fidelity PDF→PPTX/XLSX, a hand-maintained 275-path graph, or a paywall.
+
+---
+
 ## NOW — next 5 working days
 
 - [ ] **WHEEL-1b · Appear motion** — 0.5d
@@ -85,7 +121,7 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **APP-4 · App icon + packaging** — 1.5d ← next
+- [ ] **APP-4 · App icon + packaging** — 1.5d
   Acceptance: app icon and menu-bar template icon, version bump, privacy policy, dependency licences, signed bundle.
 
 ---

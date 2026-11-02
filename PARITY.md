@@ -4,17 +4,19 @@ Sources: the supported-formats screenshot, `tangerineformac.com` (homepage + `/t
 
 Legend: **✅** shipped · **➕** planned · **⚠️** fidelity caveat · **⏳** later phase · **❌** not doing
 
+> **Reality check (3 Nov 2026):** this matrix is the parity **target**, not shipped status. DragConvert today ships images + PDF only. Many targets in the capability graph are unimplemented and currently fail when dropped. See `docs/TANGERINE-GAP-REPORT.md` for the audited gap list and the P0 plan. Do not treat “~270” as shipped.
+
 ---
 
 ## 1. The numbers
 
-| Metric | Reference | Our target |
-|---|---|---|
-| Conversion paths | 275 | ~270 |
-| File tools | 26 (22 generic + 4 PDF variants) | 26 advertised + 8 extras |
-| File actions | 6 | 6 |
-| File families | 9 | 9 |
-| Price | $29.99 one-time, 20-file trial | Free and open source (MIT), no limits |
+| Metric | Reference | Our target | Shipped today |
+|---|---|---|---|
+| Conversion paths | 275 | ~270 | ~34 image/PDF paths |
+| File tools | 26 (22 generic + 4 PDF variants) | 26 advertised + 8 extras | 17 implementations, images/PDF only |
+| File actions | 6 | 6 | 6 nominal; Copy/Terminal semantics differ |
+| File families | 9 | 9 | 2 (images, PDF) |
+| Price | $29.99 one-time, 20-file trial | Free and open source (MIT), no limits | Free, MIT |
 
 ---
 
@@ -53,9 +55,9 @@ Legend: **✅** shipped · **➕** planned · **⚠️** fidelity caveat · **�
 | | |
 |---|---|
 | Input | PDF |
-| Output | **DOCX, PAGES, PPTX, XLSX**, JPG, PNG, EPUB, TXT, MD |
-| Reference note | “All pages · images at 300 DPI” |
-| Status | ✅ JPG/PNG/TIFF · ⏳ DOCX/PAGES/PPTX/XLSX/EPUB/TXT/MD |
+| Output | **DOCX, PAGES, PPTX, XLSX**, JPG, PNG, EPUB, TXT, MD, **PDF/A-2b** |
+| Reference note | “All pages · images at 300 DPI” · local OCR for scanned pages (2.0.2 adds PDF/A-2b) |
+| Status | ✅ JPG/PNG/TIFF · ⏳ DOCX/PAGES/PPTX/XLSX/EPUB/TXT/MD/PDF-A · ❌ OCR |
 
 ### 2.5 Documents
 
@@ -183,19 +185,22 @@ Every tool’s UI states its tier in one line.
 
 ---
 
-## 6. Current coverage
+## 6. Current coverage (audited 3 Nov 2026)
 
-| Family | Paths | Status |
+| Family | Working paths | Status |
 |---|---|---|
-| Images | 6 of ~65 | 🟡 JPG/PNG/HEIC/TIFF/BMP/PDF |
-| PDF | 3 of 9 | 🟡 JPG/PNG/TIFF |
-| Documents | 0 | ⏳ |
-| Slides | 0 | ⏳ |
-| Spreadsheets | 0 | ⏳ |
-| Audio | 0 | ⏳ |
-| Video | 0 | ⏳ |
-| Subtitles | 0 | ⏳ |
-| Archives | 0 | ⏳ |
-| **Total** | **9 of ~270** | **3 %** |
+| Images | ~30–40 of ~65 | 🟡 JPG/PNG/HEIC/TIFF/BMP/PDF; GIF first frame; WebP/AVIF/SVG offered but no encoder |
+| PDF | 4 of ~9 | 🟡 JPG/PNG/TIFF + tools; Office/EPUB/text/PDF-A unsupported |
+| Documents | 0 | ⏳ advertised but no engine |
+| Slides | 0 | ⏳ PPTX misclassified as document |
+| Spreadsheets | 0 | ⏳ advertised but no engine |
+| EPUB | 0 | ⏳ advertised but no engine |
+| Audio | 0 | ⏳ advertised but no engine |
+| Video | 0 | ⏳ advertised but no engine |
+| Subtitles | 0 | ⏳ advertised but no engine |
+| Archives | 0 | ⏳ advertised but no engine |
+| **Total** | **~34 of ~275** | **2 of 9 families; ~12–15 % of paths** |
 
-Tools shipped: 0 of 26. Actions shipped: 0 of 6.
+Tools shipped: 17 implementations (images/PDF). Actions shipped: 6 nominal; **Copy copies to a folder instead of the clipboard**, and Terminal is hard-coded.
+
+**The wheel currently offers many more targets than the engines support.** That is the P0 issue; see `docs/TANGERINE-GAP-REPORT.md`.
