@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var splitWindow: SplitPDFWindowController?
     private var organizeWindow: OrganizePDFWindowController?
     private var annotateWindow: AnnotatePDFWindowController?
+    private var redactWindow: RedactPDFWindowController?
     private var pdfTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -114,6 +115,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentAnnotate(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--redact-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentRedact(for: [URL(fileURLWithPath: path)])
         }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
@@ -260,6 +267,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if item.id == "tool:annotate" {
             presentAnnotate(for: urls)
+            return
+        }
+
+        if item.id == "tool:redact" {
+            presentRedact(for: urls)
             return
         }
 
@@ -497,6 +509,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         splitWindow = controller
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func presentRedact(for urls: [URL]) {
+        guard let input = urls.first, FileKind.detect(input) == .pdf else {
+            hud.fail("Redaction is wired for PDFs so far")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+        guard let controller = RedactPDFWindowController(url: input) else {
+            hud.fail("Couldn’t open that PDF")
+            return
+        }
+        controller.onApply = { [weak self] spec in
+            self?.runRedact(input: input, spec: spec)
+        }
+        redactWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runRedact(input: URL, spec: PDFRedactSpec) {
+        let job = Job(inputs: [input], operation: .pdfRedact(spec))
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Redacting PDF", subtitle: "\(spec.redactions.count) areas")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await PDFRedactEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Redacted PDF",
+                    subtitle: "\(spec.redactions.count) areas · flattened"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("redact done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("redact failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     private func presentAnnotate(for urls: [URL]) {

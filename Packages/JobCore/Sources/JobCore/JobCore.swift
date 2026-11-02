@@ -225,6 +225,26 @@ public struct PDFAnnotateSpec: Equatable, Sendable {
     }
 }
 
+public struct PDFRedaction: Equatable, Sendable {
+    public var pageIndex: Int
+    public var rect: PDFRect
+
+    public init(pageIndex: Int, rect: PDFRect) {
+        self.pageIndex = pageIndex
+        self.rect = rect
+    }
+}
+
+public struct PDFRedactSpec: Equatable, Sendable {
+    public var redactions: [PDFRedaction]
+    public var dpi: Int
+
+    public init(redactions: [PDFRedaction], dpi: Int = 200) {
+        self.redactions = redactions
+        self.dpi = dpi
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
@@ -238,6 +258,7 @@ public enum JobOperation: Equatable, Sendable {
     case pdfCrop(PDFCropSpec)
     case pdfFromImages
     case pdfAnnotate(PDFAnnotateSpec)
+    case pdfRedact(PDFRedactSpec)
     case tool(id: String)
 }
 
