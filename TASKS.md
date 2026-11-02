@@ -56,6 +56,8 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **IMG-14 · Read QR** — Vision barcode decode, copyable result panel, Open Link for a URL; generated-QR test
 - [x] **PDF-9 · Add background to PDF** — frame every page on a colour or image canvas with padding and shadow, export a new PDF; engine test
 - [x] **IMG-15 · Photo editor** — brightness, contrast, saturation and warmth sliders, live preview, exported copy; 2 engine tests
+- [x] **ONB-1 · 5-step onboarding** — capsule window, animated wheel highlight, Shift/⌥⌘/⌃ keycaps, folder access, launch at login, Done; page dots
+- [x] **ONB-2 · Folder access + finish setup** — permission button, toggle, trial copy
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -80,8 +82,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **ONB-1 · 5-step onboarding** — 2d ← next
-  Acceptance: capsule window matching the reference, animated wheel demo, Shift/⌥⌘/⌃ keycaps, folder access and finish-setup pages, page dots.
+- [ ] **ACT-1 · Actions wheel** — 2d ← next
+  Acceptance: AirDrop, Float shelf, Copy, Move, Copy Path and Terminal work from the Control wheel on files and folders.
 
 ---
 
@@ -170,8 +172,6 @@ does not reliably receive `performDragOperation`.
 ## P5 — polish + launch (weeks 24–26)
 
 - [ ] **LIC-1** StoreKit 2 + trial counter — 2d
-- [ ] **ONB-1** 5-step onboarding — 3d
-- [ ] **ONB-2** Folder access + finish setup — 1d
 - [ ] **QA-3** 40-case matrix across macOS versions — 4d
 - [ ] **QA-4** Accessibility pass — 2d
 - [ ] **QA-5** 500-conversion soak — 2d

@@ -43,6 +43,7 @@ make log     # drag / hover / drop / job — with full output paths
 - **Remove BG** via Vision’s on-device foreground mask → transparent PNG
 - **Read QR** and copy the decoded value or open its link
 - **Edit photos** with brightness, contrast, saturation and warmth + live preview
+- **5-step capsule onboarding** with wheel demo, folder access and launch at login
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
 - Atomic writes, collision naming, 43 unit tests

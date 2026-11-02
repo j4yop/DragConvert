@@ -13,7 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private let monitor = DragMonitor()
     private let wheel = WheelController()
-    private var welcomeWindow: NSWindow?
+    private var onboardingWindow: OnboardingWindowController?
     private var lastOutputs: [URL] = []
 
     private var lastSession: FileDragSession?
@@ -199,13 +199,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        if let index = CommandLine.arguments.firstIndex(of: "--onboarding-demo") {
+            let page = index + 1 < CommandLine.arguments.count
+                ? (Int(CommandLine.arguments[index + 1]) ?? 0)
+                : 0
+            showOnboarding(page: page)
+        }
+
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
             showWelcome()
             UserDefaults.standard.set(true, forKey: "hasSeenWelcome")
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            FolderAccess.shared.ensureAccess()
         }
     }
 
@@ -1371,25 +1374,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Windows
 
     @objc private func showWelcome() {
-        if let window = welcomeWindow {
-            window.makeKeyAndOrderFront(nil)
+        showOnboarding(page: 0)
+    }
+
+    private func showOnboarding(page: Int) {
+        if let onboardingWindow {
+            onboardingWindow.showWindow(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 760, height: 430),
-            styleMask: [.titled, .closable, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.isReleasedWhenClosed = false
-        window.contentViewController = NSHostingController(rootView: WelcomeView())
-        window.center()
-        window.makeKeyAndOrderFront(nil)
+
+        let controller = OnboardingWindowController(initialPage: page)
+        controller.onFinish = { [weak self] in
+            UserDefaults.standard.set(true, forKey: "hasSeenWelcome")
+            self?.onboardingWindow = nil
+        }
+        onboardingWindow = controller
+        controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
-        welcomeWindow = window
     }
 
     @objc private func grantFolderAccess() {
