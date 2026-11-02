@@ -59,6 +59,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **ONB-1 · 5-step onboarding** — capsule window, animated wheel highlight, Shift/⌥⌘/⌃ keycaps, folder access, launch at login, Done; page dots
 - [x] **ONB-2 · Folder access + finish setup** — permission button, toggle, trial copy
 - [x] **ACT-1 · Actions wheel** — AirDrop, Float shelf (drag-out rows), Copy, Move, Copy Path, Terminal; transfer engine test
+- [x] **APP-1 · Settings** — wheel shortcut pickers, sound, reveal in Finder, conflict policy (rename/replace), launch at login; persisted and applied live
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -83,8 +84,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **APP-1 · Settings** — 2d ← next
-  Acceptance: shortcut capture, sound toggle, reveal-on-finish, and conflict policy (replace/rename/ask); persisted and applied live.
+- [ ] **LIC-1 · Trial + one-time unlock** — 2d ← next
+  Acceptance: 20 free files, one-time StoreKit 2 purchase, Restore Purchases, status shown in Settings and onboarding.
 
 ---
 
@@ -102,7 +103,6 @@ does not reliably receive `performDragOperation`.
 ### PDF
 
 ### App + QA
-- [ ] **APP-1** Settings window: shortcuts, sound, reveal, conflicts — 2d
 - [ ] **APP-2** Launch at login — 0.5d
 - [ ] **APP-3** History with retry — 1.5d
 - [ ] **APP-4** App icon + menu bar template icon — 1d

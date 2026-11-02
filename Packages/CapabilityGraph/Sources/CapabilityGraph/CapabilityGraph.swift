@@ -53,11 +53,72 @@ public enum FileKind: String, CaseIterable, Sendable {
 public enum WheelMode: String, Sendable, CaseIterable {
     case convert, tools, actions
 
-    /// Control wins over Shift, so a stray modifier can't pick the wrong wheel.
     public static func from(_ flags: NSEvent.ModifierFlags) -> WheelMode? {
-        if flags.contains(.control) { return .actions }
-        if flags.contains(.option) && flags.contains(.command) { return .tools }
-        if flags.contains(.shift) { return .convert }
+        WheelShortcuts.mode(for: flags)
+    }
+}
+
+public enum WheelShortcut: String, CaseIterable, Sendable {
+    case shift, command, option, optionCommand, control, controlOption, shiftCommand, shiftControl
+
+    public var flags: NSEvent.ModifierFlags {
+        switch self {
+        case .shift: return .shift
+        case .command: return .command
+        case .option: return .option
+        case .optionCommand: return [.option, .command]
+        case .control: return .control
+        case .controlOption: return [.control, .option]
+        case .shiftCommand: return [.shift, .command]
+        case .shiftControl: return [.shift, .control]
+        }
+    }
+
+    public var title: String {
+        switch self {
+        case .shift: return "⇧ Shift"
+        case .command: return "⌘ Command"
+        case .option: return "⌥ Option"
+        case .optionCommand: return "⌥⌘ Option + Command"
+        case .control: return "⌃ Control"
+        case .controlOption: return "⌃⌥ Control + Option"
+        case .shiftCommand: return "⇧⌘ Shift + Command"
+        case .shiftControl: return "⇧⌃ Shift + Control"
+        }
+    }
+}
+
+public enum WheelShortcuts {
+    private static let convertKey = "wheelConvertShortcut"
+    private static let toolsKey = "wheelToolsShortcut"
+    private static let actionsKey = "wheelActionsShortcut"
+
+    private static func read(_ key: String, fallback: WheelShortcut) -> WheelShortcut {
+        WheelShortcut(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? fallback
+    }
+
+    public static var convert: WheelShortcut {
+        get { read(convertKey, fallback: .shift) }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: convertKey) }
+    }
+
+    public static var tools: WheelShortcut {
+        get { read(toolsKey, fallback: .optionCommand) }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: toolsKey) }
+    }
+
+    public static var actions: WheelShortcut {
+        get { read(actionsKey, fallback: .control) }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: actionsKey) }
+    }
+
+    /// Exact modifier match. Actions win over tools, tools over convert, so a
+    /// duplicated binding still resolves deterministically.
+    public static func mode(for flags: NSEvent.ModifierFlags) -> WheelMode? {
+        let clean = flags.intersection(.deviceIndependentFlagsMask)
+        if clean.contains(actions.flags) { return .actions }
+        if clean.contains(tools.flags) { return .tools }
+        if clean.contains(convert.flags) { return .convert }
         return nil
     }
 }

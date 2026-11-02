@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor = DragMonitor()
     private let wheel = WheelController()
     private var onboardingWindow: OnboardingWindowController?
+    private var settingsWindow: SettingsWindowController?
     private var lastOutputs: [URL] = []
 
     private var lastSession: FileDragSession?
@@ -199,6 +200,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        if CommandLine.arguments.contains("--settings-demo") {
+            showSettings()
+        }
+
         if let index = CommandLine.arguments.firstIndex(of: "--shelf-demo") {
             let paths = CommandLine.arguments[(index + 1)...]
                 .filter { !$0.hasPrefix("--") }
@@ -212,6 +217,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 : 0
             showOnboarding(page: page)
         }
+
+        DestinationPolicy.policy = ConflictPolicy(
+            rawValue: UserDefaults.standard.string(forKey: "conflictPolicy") ?? ""
+        ) ?? .rename
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
             showWelcome()
@@ -228,6 +237,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "How it works…", action: #selector(showWelcome), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "Grant Folder Access…", action: #selector(grantFolderAccess), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Reveal Last Result", action: #selector(revealLast), keyEquivalent: "r"))
         menu.addItem(NSMenuItem(title: "Shelf", action: #selector(toggleShelf), keyEquivalent: ""))
@@ -504,7 +514,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 title: "Converted to \(target.uppercased())",
                 subtitle: "\(files.count) of \(files.count) saved"
             )
-            NSSound(named: "Glass")?.play()
+            Sound.completion()
             Log.write("batch done \(outputs.map(\.path))")
         }
     }
@@ -575,7 +585,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: moving ? "Moved" : "Copied",
                     subtitle: outputs.isEmpty ? "Already in that folder" : "\(outputs.count) items"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("\(moving ? "move" : "copy") done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -613,6 +623,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleShelf() {
         ShelfController.shared.toggle()
+    }
+
+    private func finished(_ outputs: [URL]) {
+        lastOutputs = outputs
+        Reveal.ifEnabled(outputs)
+    }
+
+    @objc private func showSettings() {
+        if let settingsWindow {
+            settingsWindow.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        let controller = SettingsWindowController()
+        settingsWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func engine(for input: URL) -> Engine? {
@@ -692,9 +719,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await PDFCropEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(title: "Cropped PDF", subtitle: "All pages")
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("pdf crop done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -718,12 +745,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await PDFFromImagesEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Created PDF",
                     subtitle: "\(images.count) pages"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("images to pdf done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -750,12 +777,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await PDFMergeEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Merged \(pdfs.count) PDFs",
                     subtitle: "\(outputs.count) file saved"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("merge done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -825,12 +852,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageRedactEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Redacted image",
                     subtitle: "\(spec.redactions.count) boxes blacked out"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("image redact done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -850,12 +877,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await PDFRedactEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Redacted PDF",
                     subtitle: "\(spec.redactions.count) areas · flattened"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("redact done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -909,12 +936,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageAnnotateEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Annotated image",
                     subtitle: "\(spec.annotations.count) marks"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("image annotate done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -934,12 +961,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await PDFAnnotateEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Annotated PDF",
                     subtitle: "\(spec.annotations.count) marks"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("annotate done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -977,12 +1004,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await PDFOrganizeEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Page order saved",
                     subtitle: "\(spec.pages.count) pages"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("organize done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1002,12 +1029,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await PDFSplitEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Split into \(outputs.count) parts",
                     subtitle: "Saved in a new folder"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("split done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1051,9 +1078,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageMetadataEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(title: "Metadata removed", subtitle: "1 of 1 saved")
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("metadata strip done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1089,9 +1116,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageAdjustEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(title: "Edited image", subtitle: "1 of 1 saved")
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("edit done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1140,12 +1167,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageRemoveBGEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Background removed",
                     subtitle: "Transparent PNG"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("remove bg done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1186,12 +1213,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageCollageEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Collage",
                     subtitle: "\(images.count) images"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("collage done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1247,9 +1274,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await PDFFrameEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(title: "Framed PDF", subtitle: "All pages")
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("pdf frame done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1269,9 +1296,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageFrameEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(title: "Framed image", subtitle: "1 of 1 saved")
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("frame done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1321,9 +1348,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await PDFCompressEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.announceCompression(input: input, outputs: outputs)
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("pdf compress done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1344,9 +1371,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageCompressEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.announceCompression(input: input, outputs: outputs)
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("compress done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1416,9 +1443,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageEditEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(title: "\(spec.suffix) image", subtitle: "1 of 1 saved")
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("adjust done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1441,12 +1468,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageCropBatchEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(
                     title: "Batch crop",
                     subtitle: "\(outputs.count) images"
                 )
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("batch crop done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
@@ -1478,9 +1505,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let outputs = try await Task.detached(priority: .userInitiated) {
                     try await ImageCropEngine().run(job) { _ in }
                 }.value
-                self?.lastOutputs = outputs
+                self?.finished(outputs)
                 self?.hud.succeed(title: "Cropped", subtitle: "1 of 1 saved")
-                NSSound(named: "Glass")?.play()
+                Sound.completion()
                 Log.write("crop done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)

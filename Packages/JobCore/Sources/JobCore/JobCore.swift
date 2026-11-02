@@ -452,7 +452,14 @@ public enum JobEvent: Sendable {
     case cancelled(Job.ID)
 }
 
+public enum ConflictPolicy: String, Sendable, CaseIterable {
+    case rename, replace
+}
+
 public enum DestinationPolicy {
+    /// Read from Settings at launch. Default is the safe one.
+    public static var policy: ConflictPolicy = .rename
+
     /// `Page 001.pdf` → `Page 001.jpg`; collision → `Page 001 2.jpg`.
     public static func outputURL(
         for input: URL,
@@ -461,13 +468,16 @@ public enum DestinationPolicy {
     ) -> URL {
         let dir = input.deletingLastPathComponent()
         let base = input.deletingPathExtension().lastPathComponent
-        return unique(dir.appendingPathComponent("\(base).\(ext)"), exists: exists)
+        let candidate = dir.appendingPathComponent("\(base).\(ext)")
+        if policy == .replace { return candidate }
+        return unique(candidate, exists: exists)
     }
 
     public static func unique(
         _ url: URL,
         exists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }
     ) -> URL {
+        if policy == .replace { return url }
         guard exists(url) else { return url }
         let dir = url.deletingLastPathComponent()
         let ext = url.pathExtension
