@@ -38,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var metadataTask: Task<Void, Never>?
     private var splitWindow: SplitPDFWindowController?
     private var organizeWindow: OrganizePDFWindowController?
+    private var annotateWindow: AnnotatePDFWindowController?
     private var pdfTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -107,6 +108,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentCrop(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--annotate-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentAnnotate(for: [URL(fileURLWithPath: path)])
         }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
@@ -248,6 +255,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if item.id == "tool:organize" {
             presentOrganize(for: urls)
+            return
+        }
+
+        if item.id == "tool:annotate" {
+            presentAnnotate(for: urls)
             return
         }
 
@@ -485,6 +497,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         splitWindow = controller
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func presentAnnotate(for urls: [URL]) {
+        guard let input = urls.first, FileKind.detect(input) == .pdf else {
+            hud.fail("Annotation is wired for PDFs so far")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+        guard let controller = AnnotatePDFWindowController(url: input) else {
+            hud.fail("Couldn’t open that PDF")
+            return
+        }
+        controller.onApply = { [weak self] spec in
+            self?.runAnnotate(input: input, spec: spec)
+        }
+        annotateWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runAnnotate(input: URL, spec: PDFAnnotateSpec) {
+        let job = Job(inputs: [input], operation: .pdfAnnotate(spec))
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Annotating PDF", subtitle: "\(spec.annotations.count) marks")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await PDFAnnotateEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Annotated PDF",
+                    subtitle: "\(spec.annotations.count) marks"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("annotate done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("annotate failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     private func presentOrganize(for urls: [URL]) {

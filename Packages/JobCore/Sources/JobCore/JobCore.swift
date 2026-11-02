@@ -147,6 +147,84 @@ public struct PDFCropSpec: Equatable, Sendable {
     }
 }
 
+public struct PDFRect: Equatable, Sendable {
+    public var x: Double
+    public var y: Double
+    public var width: Double
+    public var height: Double
+
+    public init(x: Double, y: Double, width: Double, height: Double) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
+}
+
+public struct PDFPoint: Equatable, Sendable {
+    public var x: Double
+    public var y: Double
+
+    public init(x: Double, y: Double) {
+        self.x = x
+        self.y = y
+    }
+}
+
+public struct PDFColor: Equatable, Sendable {
+    public var red: Double
+    public var green: Double
+    public var blue: Double
+    public var alpha: Double
+
+    public init(red: Double, green: Double, blue: Double, alpha: Double = 1) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+        self.alpha = alpha
+    }
+}
+
+public struct PDFAnnotationSpec: Equatable, Sendable {
+    public enum Kind: String, Sendable {
+        case text, rectangle, ellipse, arrow, ink
+    }
+
+    public var kind: Kind
+    public var pageIndex: Int
+    public var rect: PDFRect
+    public var points: [PDFPoint]
+    public var text: String?
+    public var color: PDFColor
+    public var lineWidth: Double
+
+    public init(
+        kind: Kind,
+        pageIndex: Int,
+        rect: PDFRect = PDFRect(x: 0, y: 0, width: 0, height: 0),
+        points: [PDFPoint] = [],
+        text: String? = nil,
+        color: PDFColor,
+        lineWidth: Double = 2
+    ) {
+        self.kind = kind
+        self.pageIndex = pageIndex
+        self.rect = rect
+        self.points = points
+        self.text = text
+        self.color = color
+        self.lineWidth = lineWidth
+    }
+}
+
+public struct PDFAnnotateSpec: Equatable, Sendable {
+    public var annotations: [PDFAnnotationSpec]
+
+    public init(annotations: [PDFAnnotationSpec]) {
+        self.annotations = annotations
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
@@ -159,6 +237,7 @@ public enum JobOperation: Equatable, Sendable {
     case pdfCompress(PDFCompressSpec)
     case pdfCrop(PDFCropSpec)
     case pdfFromImages
+    case pdfAnnotate(PDFAnnotateSpec)
     case tool(id: String)
 }
 

@@ -7,7 +7,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | | Done | Target |
 |---|---|---|
 | Conversion paths | 9 | ~270 |
-| Tools | 8 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize) | 26 |
+| Tools | 9 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate PDF) | 26 |
 | File actions | 0 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
 | Unit tests | 8 | 120+ |
@@ -43,6 +43,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **PDF-4 · Compress** — Balanced (keeps text) or Target size (rasterises, binary ladder), never inflates; 3 engine tests
 - [x] **PDF-5 · Crop** — draggable box on page 1, aspect presets, applies the same normalised crop to every page; 2 engine tests
 - [x] **PDF-6 · Images → PDF** — multi-image drop on the convert wheel’s PDF target builds one PDF, one page per image in selection order; engine test
+- [x] **PDF-7 · Annotate PDF** — text, rect, ellipse, arrow, ink, colour well, page navigation, undo, saves “<name> Annotated.pdf”; engine test
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -67,8 +68,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **IMG-1b · Batch crop** — 0.5d
   Acceptance: 5 images → crop panel for the first, same rect applied to all 5, outputs “<name> Cropped.jpg”.
 
-- [ ] **PDF-7 · Annotate PDF** — 3d ← next
-  Acceptance: text, arrows, rectangles and freehand ink on a page, saved as a new PDF; original untouched.
+- [ ] **PDF-8 · Redact PDF** — 2d ← next
+  Acceptance: draw redaction areas, remove the underlying text/image content (not just cover it), save a flattened copy; original untouched.
 
 - [ ] **IMG-8 · Crop panel polish** — 1d
   Acceptance: 8 handles (edges too), editable W/H fields, 0.5 s open for a 50 MP image.
@@ -87,7 +88,6 @@ does not reliably receive `performDragOperation`.
 - [ ] **IMG-7** Read QR — 0.5d
 
 ### PDF
-- [ ] **PDF-7** Annotate — 3d
 - [ ] **PDF-8** Redact with content removal — 2d
 
 ### App + QA
