@@ -32,6 +32,8 @@ targets:
         buildPhase: resources
       - path: Config/PrivacyInfo.xcprivacy
         buildPhase: resources
+      - path: LICENSE
+        buildPhase: resources
     dependencies:
       - package: DragSense
       - package: CapabilityGraph

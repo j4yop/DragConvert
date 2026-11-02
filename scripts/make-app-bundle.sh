@@ -17,6 +17,7 @@ cp "$BUILD_BIN" "$BUNDLE/Contents/MacOS/$APP_NAME"
 cp "$ROOT/Config/Info.plist" "$BUNDLE/Contents/Info.plist"
 cp "$ROOT/Config/AppIcon.icns" "$BUNDLE/Contents/Resources/AppIcon.icns"
 cp "$ROOT/Config/PrivacyInfo.xcprivacy" "$BUNDLE/Contents/Resources/PrivacyInfo.xcprivacy"
+cp "$ROOT/LICENSE" "$BUNDLE/Contents/Resources/LICENSE"
 
 codesign --force --sign - \
   --entitlements "$ROOT/Config/DragConvert.entitlements" \
