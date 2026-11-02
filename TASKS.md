@@ -7,7 +7,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | | Done | Target |
 |---|---|---|
 | Conversion paths | 9 | ~270 |
-| Tools | 10 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate PDF, redact PDF) | 26 |
+| Tools | 11 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate PDF, redact PDF, add BG image) | 26 |
 | File actions | 0 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
 | Unit tests | 8 | 120+ |
@@ -47,6 +47,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **PDF-8 · Redact PDF** — draw boxes, rasterise + black out, true content removal (no selectable text survives), saves “<name> Redacted.pdf”; test proves text is gone
 - [x] **WHEEL-2 · Keyboard navigation** — keyable non-activating panel + local keyDown monitor; 1–9, arrows, Return, Escape; locked absorb state; verified key status without changing the frontmost app
 - [x] **IMG-8 · Crop polish** — 8 handles (corners + edges), editable W/H fields with aspect preservation, downscaled preview for fast open on large images
+- [x] **IMG-9 · Add background** — colour or image background, blur, padding, rounded corners, shadow, live preview, PNG/JPG; 2 engine tests
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -71,8 +72,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **IMG-9 · Add background** — 1.5d ← next
-  Acceptance: place an image on a larger canvas with padding, background colour or image, rounded corners and shadow; export as PNG; original untouched.
+- [ ] **IMG-10 · Redact images** — 1d ← next
+  Acceptance: draw black boxes on the preview, export a copy with the pixels replaced (not a sticker); original untouched.
 
 ---
 

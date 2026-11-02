@@ -245,6 +245,50 @@ public struct PDFRedactSpec: Equatable, Sendable {
     }
 }
 
+public struct ImageColor: Equatable, Sendable {
+    public var red: Double
+    public var green: Double
+    public var blue: Double
+    public var alpha: Double
+
+    public init(red: Double, green: Double, blue: Double, alpha: Double = 1) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+        self.alpha = alpha
+    }
+}
+
+public struct ImageFrameSpec: Equatable, Sendable {
+    public enum Background: Equatable, Sendable {
+        case color(ImageColor)
+        case image(URL)
+    }
+
+    public var paddingPercent: Double
+    public var cornerRadius: Int
+    public var shadow: Bool
+    public var blurBackground: Bool
+    public var background: Background
+    public var format: String
+
+    public init(
+        paddingPercent: Double = 0.12,
+        cornerRadius: Int = 24,
+        shadow: Bool = true,
+        blurBackground: Bool = false,
+        background: Background = .color(ImageColor(red: 0.96, green: 0.94, blue: 0.90)),
+        format: String = "png"
+    ) {
+        self.paddingPercent = paddingPercent
+        self.cornerRadius = cornerRadius
+        self.shadow = shadow
+        self.blurBackground = blurBackground
+        self.background = background
+        self.format = format
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
@@ -259,6 +303,7 @@ public enum JobOperation: Equatable, Sendable {
     case pdfFromImages
     case pdfAnnotate(PDFAnnotateSpec)
     case pdfRedact(PDFRedactSpec)
+    case imageFrame(ImageFrameSpec)
     case tool(id: String)
 }
 

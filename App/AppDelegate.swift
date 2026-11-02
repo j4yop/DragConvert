@@ -34,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var compressWindow: CompressWindowController?
     private var compressTask: Task<Void, Never>?
     private var compressPDFWindow: CompressPDFWindowController?
+    private var frameWindow: FrameImageWindowController?
+    private var frameTask: Task<Void, Never>?
     private var metadataWindow: MetadataWindowController?
     private var metadataTask: Task<Void, Never>?
     private var splitWindow: SplitPDFWindowController?
@@ -127,6 +129,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentRedact(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--frame-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentFrame(for: [URL(fileURLWithPath: path)])
         }
 
         if CommandLine.arguments.contains("--wheel-demo") {
@@ -271,6 +279,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if item.id == "tool:metadata" {
             presentMetadata(for: urls)
+            return
+        }
+
+        if item.id == "tool:addbg" {
+            presentFrame(for: urls)
             return
         }
 
@@ -734,6 +747,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.hud.fail(error.friendlyMessage)
                 NSSound.beep()
                 Log.write("metadata strip failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: Add background
+
+    private func presentFrame(for urls: [URL]) {
+        guard let input = urls.first, FileKind.detect(input) == .image else {
+            hud.fail("Add BG is wired for images so far")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+        guard let controller = FrameImageWindowController(url: input) else {
+            hud.fail("Couldn’t open that image")
+            return
+        }
+        controller.onApply = { [weak self] spec in
+            self?.runFrame(input: input, spec: spec)
+        }
+        frameWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runFrame(input: URL, spec: ImageFrameSpec) {
+        let job = Job(inputs: [input], operation: .imageFrame(spec))
+        hud.onCancel = { [weak self] in self?.frameTask?.cancel() }
+        hud.show(title: "Adding background", subtitle: "Preparing…")
+
+        frameTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageFrameEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(title: "Framed image", subtitle: "1 of 1 saved")
+                NSSound(named: "Glass")?.play()
+                Log.write("frame done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("frame failed: \(error.localizedDescription)")
             }
         }
     }
