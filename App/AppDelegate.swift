@@ -42,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var organizeWindow: OrganizePDFWindowController?
     private var annotateWindow: AnnotatePDFWindowController?
     private var redactWindow: RedactPDFWindowController?
+    private var redactImageWindow: RedactImageWindowController?
     private var pdfTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -128,6 +129,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let index = CommandLine.arguments.firstIndex(of: "--redact-demo"),
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
+            presentRedact(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--redact-image-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            Log.write("redact image demo start \(path)")
             presentRedact(for: [URL(fileURLWithPath: path)])
         }
 
@@ -552,21 +560,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func presentRedact(for urls: [URL]) {
-        guard let input = urls.first, FileKind.detect(input) == .pdf else {
-            hud.fail("Redaction is wired for PDFs so far")
-            return
-        }
+        guard let input = urls.first else { return }
         _ = FolderAccess.shared.ensureAccess()
-        guard let controller = RedactPDFWindowController(url: input) else {
-            hud.fail("Couldn’t open that PDF")
-            return
+
+        switch FileKind.detect(input) {
+        case .pdf:
+            guard let controller = RedactPDFWindowController(url: input) else {
+                hud.fail("Couldn’t open that PDF")
+                return
+            }
+            controller.onApply = { [weak self] spec in
+                self?.runRedact(input: input, spec: spec)
+            }
+            redactWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+
+        case .image:
+            guard let controller = RedactImageWindowController(url: input) else {
+                hud.fail("Couldn’t open that image")
+                return
+            }
+            controller.onApply = { [weak self] spec in
+                self?.runRedactImage(input: input, spec: spec)
+            }
+            redactImageWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            Log.write("redact image window visible=\(controller.window?.isVisible ?? false)")
+
+        default:
+            hud.fail("Redaction is wired for images and PDFs")
         }
-        controller.onApply = { [weak self] spec in
-            self?.runRedact(input: input, spec: spec)
+    }
+
+    private func runRedactImage(input: URL, spec: ImageRedactSpec) {
+        let job = Job(inputs: [input], operation: .imageRedact(spec))
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Redacting image", subtitle: "\(spec.redactions.count) boxes")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageRedactEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Redacted image",
+                    subtitle: "\(spec.redactions.count) boxes blacked out"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("image redact done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("image redact failed: \(error.localizedDescription)")
+            }
         }
-        redactWindow = controller
-        controller.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func runRedact(input: URL, spec: PDFRedactSpec) {

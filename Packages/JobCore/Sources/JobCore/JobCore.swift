@@ -289,6 +289,16 @@ public struct ImageFrameSpec: Equatable, Sendable {
     }
 }
 
+public struct ImageRedactSpec: Equatable, Sendable {
+    public var redactions: [PDFRect]
+    public var format: String
+
+    public init(redactions: [PDFRect], format: String) {
+        self.redactions = redactions
+        self.format = format
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
@@ -304,6 +314,7 @@ public enum JobOperation: Equatable, Sendable {
     case pdfAnnotate(PDFAnnotateSpec)
     case pdfRedact(PDFRedactSpec)
     case imageFrame(ImageFrameSpec)
+    case imageRedact(ImageRedactSpec)
     case tool(id: String)
 }
 

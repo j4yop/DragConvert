@@ -35,9 +35,10 @@ make log     # drag / hover / drop / job — with full output paths
 - **Annotate PDF** with text, rectangles, ellipses, arrows and freehand ink, page by page
 - **Redact PDF** with true content removal: pages are flattened and anything under a box is gone
 - **Add BG** for images: padding, colour or image background, blur, rounded corners, shadow
+- **Redact images** with black boxes, Undo and a pixel-replaced export
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
-- Atomic writes, collision naming, 35 unit tests
+- Atomic writes, collision naming, 36 unit tests
 
 Private repo: <https://github.com/j4yop/DragConvert>
 

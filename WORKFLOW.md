@@ -98,7 +98,7 @@ Budgets: wheel ≤ 80 ms, idle CPU ≈ 0, 10 MB image ≤ 400 ms, PDF page ≤ 2
 | → Thu | **WHEEL-1b** appear motion + **S3** performance | “10 wedges at 120 fps, no leaks.” |
 | → Fri | **DRAG-2** mixed selection + demo | “A mixed selection tells me what to do.” |
 
-**Image tools and the first PDF tools are done:** crop, resize, rotate, compress, metadata, PDF merge and PDF split. Keyboard navigation, crop polish and image Add BG are done. Next: verify keyboard during a real Finder drag, then image redact/annotate and batch crop.
+**Image tools and the first PDF tools are done:** crop, resize, rotate, compress, metadata, PDF merge and PDF split. Keyboard navigation, crop polish, image Add BG and image redact are done. Next: verify keyboard during a real Finder drag, then image annotate and batch crop.
 
 **Blocked decision:** keyboard navigation (**WHEEL-2**) needs either Input Monitoring (listen-only event tap) or activating the panel (loses Finder focus). Decide in week 3; do not let it block the image tools.
 
