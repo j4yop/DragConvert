@@ -313,10 +313,12 @@ private struct WheelGraphic: View {
         center: CGPoint,
         radius: CGFloat
     ) -> CGPoint {
-        let angle = (-90.0 + 360.0 / Double(count) * Double(index)) * .pi / 180
+        let angle: Double = (-90.0 + 360.0 / Double(count) * Double(index)) * .pi / 180
+        let cosine = cos(angle)
+        let sine = sin(angle)
         return CGPoint(
-            x: center.x + cos(angle) * radius,
-            y: center.y + sin(angle) * radius
+            x: center.x + CGFloat(cosine) * radius,
+            y: center.y + CGFloat(sine) * radius
         )
     }
 }
