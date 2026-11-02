@@ -26,7 +26,7 @@ make log     # drag / hover / drop / job — with full output paths
 - Progress HUD with running / success / failure states and cancel
 - Batch selections: “3 of 5 saved”, stops on the first error
 - Friendly errors for permission, disk full and missing files
-- **Crop** with draggable rect, aspect presets, live pixel size, new file output
+- **Crop** with 8 handles, editable W/H, aspect presets, live pixel size, new file output
 - **Resize + rotate/flip** with lock-aspect fields and a live preview
 - **Compress** to a target KB or quality %, iterative, never inflates
 - **Metadata** viewer (file, image, camera, dates, GPS) with one-click strip

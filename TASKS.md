@@ -46,6 +46,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **PDF-7 · Annotate PDF** — text, rect, ellipse, arrow, ink, colour well, page navigation, undo, saves “<name> Annotated.pdf”; engine test
 - [x] **PDF-8 · Redact PDF** — draw boxes, rasterise + black out, true content removal (no selectable text survives), saves “<name> Redacted.pdf”; test proves text is gone
 - [x] **WHEEL-2 · Keyboard navigation** — keyable non-activating panel + local keyDown monitor; 1–9, arrows, Return, Escape; locked absorb state; verified key status without changing the frontmost app
+- [x] **IMG-8 · Crop polish** — 8 handles (corners + edges), editable W/H fields with aspect preservation, downscaled preview for fast open on large images
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -70,8 +71,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **IMG-8 · Crop panel polish** — 1d
-  Acceptance: 8 handles (edges too), editable W/H fields, 0.5 s open for a 50 MP image.
+- [ ] **IMG-9 · Add background** — 1.5d ← next
+  Acceptance: place an image on a larger canvas with padding, background colour or image, rounded corners and shadow; export as PNG; original untouched.
 
 ---
 

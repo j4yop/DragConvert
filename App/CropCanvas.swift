@@ -1,7 +1,7 @@
 import AppKit
 
 /// Image preview with a draggable crop rectangle.
-/// Four corner handles, move inside the rect, optional aspect lock.
+/// Eight handles, move inside the rect, optional aspect lock.
 final class CropCanvas: NSView {
     var image: CGImage? {
         didSet { needsDisplay = true; reset() }
@@ -13,9 +13,15 @@ final class CropCanvas: NSView {
 
     var onCropChanged: ((CGRect) -> Void)?
 
+    /// Full-resolution pixel size of the source image, when the preview is
+    /// downscaled. `nil` means the preview itself is full size.
+    var sourceSize: CGSize?
+
     private(set) var cropRect: CGRect = .zero
 
-    private enum Handle { case topLeft, topRight, bottomRight, bottomLeft, move, none }
+    private enum Handle {
+        case topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left, move, none
+    }
     private var dragHandle: Handle = .none
     private var dragStart: NSPoint = .zero
     private var startRect: CGRect = .zero
@@ -101,7 +107,7 @@ final class CropCanvas: NSView {
         onCropChanged?(cropRect)
     }
 
-    /// Crop rect in image pixels, top-left origin (CGImage.cropping space).
+    /// Crop rect in the preview image's pixels (used by the PDF crop panel).
     func pixelRect() -> CGRect {
         guard let image, imageRect.width > 0 else { return .zero }
         let scale = CGFloat(image.width) / imageRect.width
@@ -111,6 +117,39 @@ final class CropCanvas: NSView {
             width: (cropRect.width * scale).rounded(),
             height: (cropRect.height * scale).rounded()
         )
+    }
+
+    /// Crop rect in the full-resolution source pixels (image crop engine).
+    func sourcePixelRect() -> CGRect {
+        guard let image, imageRect.width > 0, imageRect.height > 0 else { return .zero }
+        let target = sourceSize ?? CGSize(width: image.width, height: image.height)
+        guard target.width > 0, target.height > 0 else { return .zero }
+        let sx = target.width / imageRect.width
+        let sy = target.height / imageRect.height
+        return CGRect(
+            x: ((cropRect.minX - imageRect.minX) * sx).rounded(),
+            y: ((imageRect.maxY - cropRect.maxY) * sy).rounded(),
+            width: (cropRect.width * sx).rounded(),
+            height: (cropRect.height * sy).rounded()
+        )
+    }
+
+    /// Apply an exact pixel size, keeping the crop's top-left corner.
+    func setCropSize(widthPixels: Int, heightPixels: Int) {
+        guard let image, imageRect.width > 0, imageRect.height > 0 else { return }
+        let target = sourceSize ?? CGSize(width: image.width, height: image.height)
+        guard target.width > 0, target.height > 0 else { return }
+        let viewWidth = CGFloat(max(1, widthPixels)) / target.width * imageRect.width
+        let viewHeight = CGFloat(max(1, heightPixels)) / target.height * imageRect.height
+        var rect = CGRect(
+            x: cropRect.minX,
+            y: cropRect.maxY - viewHeight,
+            width: viewWidth,
+            height: viewHeight
+        )
+        rect = clamp(rect)
+        cropRect = rect
+        notify()
     }
 
     // MARK: Drawing
@@ -146,7 +185,7 @@ final class CropCanvas: NSView {
         thirds.lineWidth = 0.5
         thirds.stroke()
 
-        for point in cornerPoints() {
+        for (_, point) in handlePoints() {
             let rect = CGRect(
                 x: point.x - handleSize / 2,
                 y: point.y - handleSize / 2,
@@ -161,24 +200,22 @@ final class CropCanvas: NSView {
         }
     }
 
-    private func cornerPoints() -> [NSPoint] {
+    private func handlePoints() -> [(Handle, NSPoint)] {
         [
-            NSPoint(x: cropRect.minX, y: cropRect.maxY), // top-left
-            NSPoint(x: cropRect.maxX, y: cropRect.maxY), // top-right
-            NSPoint(x: cropRect.maxX, y: cropRect.minY), // bottom-right
-            NSPoint(x: cropRect.minX, y: cropRect.minY)  // bottom-left
+            (.topLeft, NSPoint(x: cropRect.minX, y: cropRect.maxY)),
+            (.top, NSPoint(x: cropRect.midX, y: cropRect.maxY)),
+            (.topRight, NSPoint(x: cropRect.maxX, y: cropRect.maxY)),
+            (.right, NSPoint(x: cropRect.maxX, y: cropRect.midY)),
+            (.bottomRight, NSPoint(x: cropRect.maxX, y: cropRect.minY)),
+            (.bottom, NSPoint(x: cropRect.midX, y: cropRect.minY)),
+            (.bottomLeft, NSPoint(x: cropRect.minX, y: cropRect.minY)),
+            (.left, NSPoint(x: cropRect.minX, y: cropRect.midY))
         ]
     }
 
     private func hitTest(_ point: NSPoint) -> Handle {
-        let handles: [(Handle, NSPoint)] = [
-            (.topLeft, NSPoint(x: cropRect.minX, y: cropRect.maxY)),
-            (.topRight, NSPoint(x: cropRect.maxX, y: cropRect.maxY)),
-            (.bottomRight, NSPoint(x: cropRect.maxX, y: cropRect.minY)),
-            (.bottomLeft, NSPoint(x: cropRect.minX, y: cropRect.minY))
-        ]
-        for (handle, p) in handles where abs(point.x - p.x) <= handleSize &&
-            abs(point.y - p.y) <= handleSize {
+        for (handle, p) in handlePoints()
+        where abs(point.x - p.x) <= handleSize && abs(point.y - p.y) <= handleSize {
             return handle
         }
         return cropRect.contains(point) ? .move : .none
@@ -257,6 +294,57 @@ final class CropCanvas: NSView {
             } else {
                 rect.origin.y = startRect.minY + dy
                 rect.size.height = startRect.maxY - rect.origin.y
+            }
+            rect = clamp(rect)
+
+        case .top:
+            rect.size.height = min(
+                max(minSize, startRect.height + dy),
+                b.maxY - startRect.minY
+            )
+            rect.origin.y = startRect.minY
+            if let aspect {
+                let width = min(rect.height * aspect, b.width)
+                rect.size.width = width
+                rect.origin.x = startRect.midX - width / 2
+            } else {
+                rect.size.width = startRect.width
+            }
+            rect = clamp(rect)
+
+        case .bottom:
+            rect.origin.y = min(max(b.minY, startRect.minY + dy), startRect.maxY - minSize)
+            rect.size.height = startRect.maxY - rect.origin.y
+            if let aspect {
+                let width = min(rect.height * aspect, b.width)
+                rect.size.width = width
+                rect.origin.x = startRect.midX - width / 2
+            } else {
+                rect.size.width = startRect.width
+            }
+            rect = clamp(rect)
+
+        case .left:
+            rect.origin.x = min(max(b.minX, startRect.minX + dx), startRect.maxX - minSize)
+            rect.size.width = startRect.maxX - rect.origin.x
+            if let aspect {
+                let height = min(rect.width / aspect, b.height)
+                rect.size.height = height
+                rect.origin.y = startRect.midY - height / 2
+            } else {
+                rect.size.height = startRect.height
+            }
+            rect = clamp(rect)
+
+        case .right:
+            rect.size.width = min(max(minSize, startRect.width + dx), b.maxX - startRect.minX)
+            rect.origin.x = startRect.minX
+            if let aspect {
+                let height = min(rect.width / aspect, b.height)
+                rect.size.height = height
+                rect.origin.y = startRect.midY - height / 2
+            } else {
+                rect.size.height = startRect.height
             }
             rect = clamp(rect)
 

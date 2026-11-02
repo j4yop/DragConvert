@@ -412,7 +412,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         switch FileKind.detect(input) {
         case .image:
-            let controller = CropWindowController(url: input)
+            guard let controller = CropWindowController(url: input) else {
+                hud.fail("Couldn’t open that image")
+                return
+            }
             controller.onApply = { [weak self] rect in
                 self?.runCrop(input: input, rect: rect)
             }

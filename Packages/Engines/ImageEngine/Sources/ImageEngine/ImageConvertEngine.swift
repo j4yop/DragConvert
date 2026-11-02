@@ -47,6 +47,32 @@ public struct ImageConvertEngine: Engine {
         return loadFullSizeImage(from: source)
     }
 
+    /// Pixel size after EXIF orientation, without decoding the image.
+    public static func imageSize(at url: URL) -> CGSize? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
+              let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue
+        else { return nil }
+
+        let orientation = (properties[kCGImagePropertyOrientation] as? NSNumber)?.intValue ?? 1
+        if [5, 6, 7, 8].contains(orientation) {
+            return CGSize(width: height, height: width)
+        }
+        return CGSize(width: width, height: height)
+    }
+
+    /// Downscaled, orientation-correct preview for editors.
+    public static func loadPreview(at url: URL, maxPixel: Int) -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixel
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    }
+
     static func loadFullSizeImage(from source: CGImageSource) -> CGImage? {
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
         let width = properties?[kCGImagePropertyPixelWidth] as? Int ?? 0

@@ -16,7 +16,11 @@ final class CropWindowController: NSWindowController {
     private let resetButton = NSButton(title: "Reset", target: nil, action: nil)
     private let applyButton = NSButton(title: "Apply", target: nil, action: nil)
 
-    init(url: URL) {
+    init?(url: URL) {
+        guard let sourceSize = ImageConvertEngine.imageSize(at: url),
+              let preview = ImageConvertEngine.loadPreview(at: url, maxPixel: 1800)
+        else { return nil }
+
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 560, height: 680),
             styleMask: [.titled, .closable],
@@ -28,7 +32,8 @@ final class CropWindowController: NSWindowController {
         window.center()
         super.init(window: window)
 
-        canvas.image = ImageConvertEngine.loadImage(at: url)
+        canvas.sourceSize = sourceSize
+        canvas.image = preview
         canvas.onCropChanged = { [weak self] _ in self?.updateFields() }
         buildUI()
         updateFields()
@@ -64,8 +69,20 @@ final class CropWindowController: NSWindowController {
             field.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
             field.alignment = .right
             field.isSelectable = true
+            field.isEditable = true
+            field.isBezeled = true
+            field.drawsBackground = true
+            field.target = self
+            field.action = #selector(sizeChanged(_:))
+            (field.cell as? NSTextFieldCell)?.sendsActionOnEndEditing = true
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .none
+            formatter.minimum = 1
+            formatter.maximum = 100_000
+            formatter.allowsFloats = false
+            field.formatter = formatter
             field.translatesAutoresizingMaskIntoConstraints = false
-            field.widthAnchor.constraint(equalToConstant: 74).isActive = true
+            field.widthAnchor.constraint(equalToConstant: 80).isActive = true
         }
 
         let wLabel = NSTextField(labelWithString: "W")
@@ -102,7 +119,13 @@ final class CropWindowController: NSWindowController {
         buttonsRow.spacing = 12
         buttonsRow.distribution = .fill
 
-        let stack = NSStackView(views: [canvas, aspectRow, sizeRow, buttonsRow])
+        let hint = NSTextField(
+            labelWithString: "Drag any of the eight handles, or type an exact size."
+        )
+        hint.font = .systemFont(ofSize: 11)
+        hint.textColor = .tertiaryLabelColor
+
+        let stack = NSStackView(views: [canvas, aspectRow, sizeRow, hint, buttonsRow])
         stack.orientation = .vertical
         stack.spacing = 14
         stack.edgeInsets = NSEdgeInsets(top: 20, left: 24, bottom: 20, right: 24)
@@ -119,9 +142,29 @@ final class CropWindowController: NSWindowController {
     }
 
     private func updateFields() {
-        let rect = canvas.pixelRect()
+        let rect = canvas.sourcePixelRect()
         widthField.stringValue = "\(Int(rect.width))"
         heightField.stringValue = "\(Int(rect.height))"
+    }
+
+    @objc private func sizeChanged(_ sender: NSTextField) {
+        let current = canvas.sourcePixelRect()
+        var width = Int(widthField.stringValue) ?? Int(current.width)
+        var height = Int(heightField.stringValue) ?? Int(current.height)
+
+        if let aspect = canvas.aspect {
+            if sender === widthField {
+                height = max(1, Int((Double(width) / aspect).rounded()))
+            } else {
+                width = max(1, Int((Double(height) * aspect).rounded()))
+            }
+        }
+
+        canvas.setCropSize(
+            widthPixels: max(1, width),
+            heightPixels: max(1, height)
+        )
+        updateFields()
     }
 
     @objc private func aspectChanged(_ sender: NSSegmentedControl) {
@@ -136,7 +179,7 @@ final class CropWindowController: NSWindowController {
     }
 
     @objc private func applyCrop() {
-        let rect = canvas.pixelRect()
+        let rect = canvas.sourcePixelRect()
         guard rect.width >= 1, rect.height >= 1 else { return }
         onApply?(rect)
         close()
