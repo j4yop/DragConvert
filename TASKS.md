@@ -7,7 +7,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | | Done | Target |
 |---|---|---|
 | Conversion paths | 9 | ~270 |
-| Tools | 12 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate PDF, redact PDF, add BG image, redact image) | 26 |
+| Tools | 13 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate img+PDF, redact img+PDF, add BG image) | 26 |
 | File actions | 0 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
 | Unit tests | 8 | 120+ |
@@ -49,6 +49,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **IMG-8 · Crop polish** — 8 handles (corners + edges), editable W/H fields with aspect preservation, downscaled preview for fast open on large images
 - [x] **IMG-9 · Add background** — colour or image background, blur, padding, rounded corners, shadow, live preview, PNG/JPG; 2 engine tests
 - [x] **IMG-10 · Redact images** — drag black boxes, Undo, live count, exports a copy with the pixels replaced; engine test
+- [x] **IMG-11 · Annotate images** — text, rect, ellipse, arrow, ink, colour, undo, flattened export; engine test
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -73,8 +74,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **IMG-11 · Annotate images** — 1.5d ← next
-  Acceptance: text, rectangles, ellipses, arrows and freehand ink on an image, colour choice, undo, exports a flattened copy.
+- [ ] **IMG-1b · Batch crop** — 0.5d ← next
+  Acceptance: select 5 images, crop the first, apply the same rect to all 5, outputs “<name> Cropped.jpg”.
 
 ---
 

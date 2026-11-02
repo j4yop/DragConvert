@@ -41,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var splitWindow: SplitPDFWindowController?
     private var organizeWindow: OrganizePDFWindowController?
     private var annotateWindow: AnnotatePDFWindowController?
+    private var annotateImageWindow: AnnotateImageWindowController?
     private var redactWindow: RedactPDFWindowController?
     private var redactImageWindow: RedactImageWindowController?
     private var pdfTask: Task<Void, Never>?
@@ -130,6 +131,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentRedact(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--annotate-image-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentAnnotate(for: [URL(fileURLWithPath: path)])
         }
 
         if let index = CommandLine.arguments.firstIndex(of: "--redact-image-demo"),
@@ -645,21 +652,62 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func presentAnnotate(for urls: [URL]) {
-        guard let input = urls.first, FileKind.detect(input) == .pdf else {
-            hud.fail("Annotation is wired for PDFs so far")
-            return
-        }
+        guard let input = urls.first else { return }
         _ = FolderAccess.shared.ensureAccess()
-        guard let controller = AnnotatePDFWindowController(url: input) else {
-            hud.fail("Couldn’t open that PDF")
-            return
+
+        switch FileKind.detect(input) {
+        case .pdf:
+            guard let controller = AnnotatePDFWindowController(url: input) else {
+                hud.fail("Couldn’t open that PDF")
+                return
+            }
+            controller.onApply = { [weak self] spec in
+                self?.runAnnotate(input: input, spec: spec)
+            }
+            annotateWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+
+        case .image:
+            guard let controller = AnnotateImageWindowController(url: input) else {
+                hud.fail("Couldn’t open that image")
+                return
+            }
+            controller.onApply = { [weak self] spec in
+                self?.runAnnotateImage(input: input, spec: spec)
+            }
+            annotateImageWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+
+        default:
+            hud.fail("Annotation is wired for images and PDFs")
         }
-        controller.onApply = { [weak self] spec in
-            self?.runAnnotate(input: input, spec: spec)
+    }
+
+    private func runAnnotateImage(input: URL, spec: ImageAnnotateSpec) {
+        let job = Job(inputs: [input], operation: .imageAnnotate(spec))
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Annotating image", subtitle: "\(spec.annotations.count) marks")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageAnnotateEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Annotated image",
+                    subtitle: "\(spec.annotations.count) marks"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("image annotate done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("image annotate failed: \(error.localizedDescription)")
+            }
         }
-        annotateWindow = controller
-        controller.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func runAnnotate(input: URL, spec: PDFAnnotateSpec) {
