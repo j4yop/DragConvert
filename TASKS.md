@@ -1,0 +1,172 @@
+# Tasks
+
+Live backlog. IDs go in commit messages. Estimates are focused working days.
+
+## Parity counter
+
+| | Done | Target |
+|---|---|---|
+| Conversion paths | 9 | ~270 |
+| Tools | 0 | 26 |
+| File actions | 0 | 6 |
+| Families | 3 (image, PDF, partial docs) | 9 |
+| Unit tests | 8 | 120+ |
+
+---
+
+## DONE
+
+- [x] **CORE-0** SwiftPM workspace, app target, local packages
+- [x] **DRAG-1** Drag monitor: pasteboard + button + modifiers, no Accessibility permission
+- [x] **WHEEL-0** Non-activating panel, geometry, hit-testing, drop
+- [x] **CAP-0** Capability graph for 9 families, own-format exclusion, 10-wedge cap
+- [x] **JOB-0** Job model, atomic write, collision naming
+- [x] **IMG-0** ImageIO: JPG/PNG/HEIC/TIFF/BMP → JPG/PNG/HEIC/TIFF/BMP/PDF
+- [x] **PDF-0** PDF → JPG/PNG/TIFF at 300 DPI, all pages
+- [x] **APP-0** Menu bar, welcome, folder access, headless harness, signed bundle
+- [x] **QA-0** Unit tests, fixture generator, CI
+- [x] **S1** Sandboxed drag works: wheel appears, drop returns the file
+- [x] **S2** Sandboxed write beside the original works (verified headless; GUI path logged)
+- [x] **V1** PDF → 4 JPGs through the wheel in one drop
+
+**Lesson from S1:** the panel must be anchored, not follow the pointer, and the
+drop must have a polled-pointer fallback because a panel that appears mid-drag
+does not reliably receive `performDragOperation`.
+
+---
+
+## NOW — next 5 working days
+
+- [ ] **VERIFY-1** Confirm the GUI output path — 0.25d
+  Acceptance: one drop, `make log` shows the full output path, the file is on disk beside the source.
+
+- [ ] **CORE-1 · Progress HUD** — 1.5d
+  Acceptance: capsule near the cursor, “Converting to JPG · 1 of 1 saved”, progress bar, cancel; auto-dismiss 1.6 s; stacks up to 3; matches `PLAN.md §7`.
+
+- [ ] **CORE-2 · Batch selections** — 1d
+  Acceptance: 5 PDFs dropped at once produce 5 jobs, 1 progress row with “3 of 5”, concurrency 2, cancel leaves no temp files.
+
+- [ ] **CORE-3 · Error surfacing** — 0.5d
+  Acceptance: unsupported target, corrupt file, permission denied and disk full each show a human sentence and one action; no raw errors.
+
+- [ ] **WHEEL-1 · Motion + haptics** — 0.5d
+  Acceptance: appear spring 0.28/0.82, hover 0.12 s, alignment haptic on wedge change, Reduce Motion = fade only.
+
+- [ ] **WHEEL-2 · Keyboard navigation** — 1d
+  Acceptance: 1–9 select, ←/→ cycle, ↵ apply, esc cancel, tab switches convert/tools/actions.
+
+- [ ] **S3 · Wheel performance** — 0.5d
+  Acceptance: 120 fps with 10 wedges, < 8 % CPU, no memory growth after 50 opens, Reduce Transparency respected.
+
+- [ ] **DRAG-2 · Mixed-selection notice** — 0.5d
+  Acceptance: PDF + PNG shows a notice instead of a wrong wheel; actions wheel still works.
+
+---
+
+## P1 — core (weeks 2–6)
+
+### Images
+- [ ] **IMG-1** Crop panel: Free/1:1/16:9/9:16/4:3/3:4, W/H px, Reset/Apply — 2d
+- [ ] **IMG-2** Resize (px + %) and rotate/flip — 1d
+- [ ] **IMG-3** Compress to target size or % — 2d
+- [ ] **IMG-4** libwebp + libavif: WebP/AVIF encode — 2d
+- [ ] **IMG-5** resvg: SVG input at 1×/2×/4× — 1.5d
+- [ ] **IMG-6** Metadata read + strip, GPS badge — 2d
+- [ ] **IMG-7** Read QR — 0.5d
+
+### PDF
+- [ ] **PDF-1** Merge (selection order + reorder) — 1d
+- [ ] **PDF-2** Split (ranges / equal parts) — 1d
+- [ ] **PDF-3** Organize pages (reorder/rotate/duplicate/remove) — 2d
+- [ ] **PDF-4** Compress to target size — 2d
+- [ ] **PDF-5** Crop (crop/media box) — 0.5d
+- [ ] **PDF-6** Images → PDF — 1d
+- [ ] **PDF-7** Annotate — 3d
+- [ ] **PDF-8** Redact with content removal — 2d
+
+### App + QA
+- [ ] **APP-1** Settings window: shortcuts, sound, reveal, conflicts — 2d
+- [ ] **APP-2** Launch at login — 0.5d
+- [ ] **APP-3** History with retry — 1.5d
+- [ ] **APP-4** App icon + menu bar template icon — 1d
+- [ ] **WHEEL-3** “More…” wedge for >10 capabilities — 1d
+- [ ] **WHEEL-4** Real glass material + specular stroke — 1.5d
+- [ ] **WHEEL-5** Snapshot tests 4/6/10 wedges — 1d
+- [ ] **QA-1** Fixture corpus: 120 files — 2d
+- [ ] **QA-2** Property tests per engine — 2d
+
+---
+
+## P2 — media (weeks 7–12)
+
+- [ ] **AUD-1** FFmpeg LGPL build + runner — 4d (legal gate)
+- [ ] **AUD-2** 8 audio formats in/out — 2d
+- [ ] **AUD-3** Normalize — 1.5d
+- [ ] **AUD-4** Trim + silence detection — 2d
+- [ ] **AUD-5** Channels — 1d
+- [ ] **AUD-6** Bleep — 1.5d
+- [ ] **AUD-7** Visualizer → MP4 — 3d
+- [ ] **VID-1** Video convert + MP3 — 3d
+- [ ] **VID-2** Trim — 1.5d
+- [ ] **VID-3** Crop — 1d
+- [ ] **VID-4** Speed — 1.5d
+- [ ] **VID-5** Join — 2d
+- [ ] **VID-6** Split — 1.5d
+- [ ] **VID-7** Save frames — 1d
+- [ ] **VID-8** Redact — 3d
+- [ ] **ARC-1** Archives — 1d
+- [ ] **ACT-1** AirDrop — 0.5d
+- [ ] **ACT-2** Float shelf — 2d
+- [ ] **ACT-3** Copy / Move — 1d
+- [ ] **ACT-4** Copy Path / Terminal — 0.5d
+
+---
+
+## P3 — structural (weeks 13–18)
+
+- [ ] **DOC-1** DocModel — 4d
+- [ ] **DOC-2** DOCX import/export — 4d
+- [ ] **DOC-3** PDF → DOCX — 3d
+- [ ] **DOC-4** RTF/RTFD/clippings in, HTML out — 2d
+- [ ] **DOC-5** EPUB — 2d
+- [ ] **DOC-6** PAGES export (go/no-go first) — 4d
+- [ ] **SHEET-1** XLSX/ODS/CSV/TSV — 3d
+- [ ] **SHEET-2** XLS input — 2d
+- [ ] **SHEET-3** Sheet picker + inference — 1.5d
+- [ ] **SLIDE-1** PPTX renderer — 6d
+- [ ] **SLIDE-2** PDF → PPTX — 2d
+- [ ] **PDFX-1** PDF → PPTX/XLSX/PAGES — 5d
+- [ ] **PDFX-2** Table extraction — 3d
+- [ ] **SUB-1** SRT/VTT — 1d
+
+---
+
+## P4 — advanced (weeks 19–23)
+
+- [ ] **IMGX-1** Photo editor — 5d
+- [ ] **IMGX-2** Annotate — 4d
+- [ ] **IMGX-3** Add background — 2d
+- [ ] **IMGX-4** Redact photos — 3d
+- [ ] **IMGX-5** Collage — 3d
+- [ ] **IMGX-6** Remove background — 2d
+- [ ] **IMGX-7** Metadata editor — 3d
+
+---
+
+## P5 — polish + launch (weeks 24–26)
+
+- [ ] **LIC-1** StoreKit 2 + trial counter — 2d
+- [ ] **ONB-1** 5-step onboarding — 3d
+- [ ] **ONB-2** Folder access + finish setup — 1d
+- [ ] **QA-3** 40-case matrix across macOS versions — 4d
+- [ ] **QA-4** Accessibility pass — 2d
+- [ ] **QA-5** 500-conversion soak — 2d
+- [ ] **REL-1** Privacy, support, licences, FFmpeg offer — 1d
+- [ ] **REL-2** Screenshots + preview — 2d
+- [ ] **REL-3** TestFlight + submission — 1d
+
+---
+
+## Icebox
+
+Watch folders · recipes · AppleScript/Shortcuts · Windows · cloud · 7z · OCR by default

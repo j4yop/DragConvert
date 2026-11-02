@@ -1,0 +1,52 @@
+name: DragConvert
+
+options:
+  bundleIdPrefix: com.dragconvert
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+packages:
+  DragSense:
+    path: Packages/DragSense
+  CapabilityGraph:
+    path: Packages/CapabilityGraph
+  WheelUI:
+    path: Packages/WheelUI
+  JobCore:
+    path: Packages/JobCore
+  EngineKit:
+    path: Packages/EngineKit
+  PDFEngine:
+    path: Packages/Engines/PDFEngine
+  ImageEngine:
+    path: Packages/Engines/ImageEngine
+
+targets:
+  DragConvert:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+    dependencies:
+      - package: DragSense
+      - package: CapabilityGraph
+      - package: WheelUI
+      - package: JobCore
+      - package: EngineKit
+      - package: PDFEngine
+      - package: ImageEngine
+    info:
+      path: Config/Info.plist
+    entitlements:
+      path: Config/DragConvert.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dragconvert.app
+        PRODUCT_NAME: DragConvert
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "2"
+        SWIFT_VERSION: "5.9"
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: NO

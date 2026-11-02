@@ -1,0 +1,12 @@
+.build/
+build/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+.DS_Store
+.swiftpm/
+Package.resolved
+Tests/Fixtures/*.jpg
+Tests/Fixtures/*.png

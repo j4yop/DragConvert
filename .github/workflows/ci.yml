@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
+      - name: Headless conversion
+        run: |
+          swift scripts/make-fixtures.swift
+          .build/debug/DragConvert --convert Tests/Fixtures/sample.pdf --to jpg
+          test -f Tests/Fixtures/sample.jpg
