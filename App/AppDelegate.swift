@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var compressPDFWindow: CompressPDFWindowController?
     private var frameWindow: FrameImageWindowController?
     private var frameTask: Task<Void, Never>?
+    private var collageWindow: CollageImageWindowController?
     private var metadataWindow: MetadataWindowController?
     private var metadataTask: Task<Void, Never>?
     private var splitWindow: SplitPDFWindowController?
@@ -131,6 +132,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentRedact(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--collage-demo") {
+            let paths = CommandLine.arguments[(index + 1)...]
+                .filter { !$0.hasPrefix("--") }
+                .map { URL(fileURLWithPath: $0) }
+            presentCollage(for: Array(paths))
         }
 
         if let index = CommandLine.arguments.firstIndex(of: "--crop-batch-demo"),
@@ -306,6 +314,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if item.id == "tool:addbg" {
             presentFrame(for: urls)
+            return
+        }
+
+        if item.id == "tool:collage" {
+            presentCollage(for: urls)
             return
         }
 
@@ -873,6 +886,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.hud.fail(error.friendlyMessage)
                 NSSound.beep()
                 Log.write("metadata strip failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: Collage
+
+    private func presentCollage(for urls: [URL]) {
+        let images = urls.filter { FileKind.detect($0) == .image }
+        guard images.count >= 2, images.count == urls.count else {
+            hud.fail("Select two or more images to make a collage")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+        guard let controller = CollageImageWindowController(urls: images) else {
+            hud.fail("Couldn’t open those images")
+            return
+        }
+        controller.onApply = { [weak self] spec in
+            self?.runCollage(images, spec: spec)
+        }
+        collageWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runCollage(_ images: [URL], spec: ImageCollageSpec) {
+        let job = Job(inputs: images, operation: .imageCollage(spec))
+        hud.onCancel = { [weak self] in self?.cropTask?.cancel() }
+        hud.show(title: "Building collage", subtitle: "\(images.count) images")
+
+        cropTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageCollageEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Collage",
+                    subtitle: "\(images.count) images"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("collage done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("collage failed: \(error.localizedDescription)")
             }
         }
     }

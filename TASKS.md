@@ -7,7 +7,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | | Done | Target |
 |---|---|---|
 | Conversion paths | 9 | ~270 |
-| Tools | 13 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate img+PDF, redact img+PDF, add BG image) | 26 |
+| Tools | 14 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate img+PDF, redact img+PDF, add BG image, collage) | 26 |
 | File actions | 0 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
 | Unit tests | 8 | 120+ |
@@ -51,6 +51,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **IMG-10 · Redact images** — drag black boxes, Undo, live count, exports a copy with the pixels replaced; engine test
 - [x] **IMG-11 · Annotate images** — text, rect, ellipse, arrow, ink, colour, undo, flattened export; engine test
 - [x] **IMG-1b · Batch crop** — one relative crop applied to every selected image, each output beside its source; engine test
+- [x] **IMG-12 · Collage** — grid/row/column/featured layouts, spacing, rounded corners, background, live preview; engine test
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -75,8 +76,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **IMG-12 · Collage** — 2d ← next
-  Acceptance: 5 images → grid/row/column layout, spacing and background controls, one PNG output.
+- [ ] **IMG-13 · Remove background** — 1.5d ← next
+  Acceptance: lift the subject with Vision’s foreground mask and export a transparent PNG; original untouched.
 
 ---
 

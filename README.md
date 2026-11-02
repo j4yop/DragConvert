@@ -38,9 +38,10 @@ make log     # drag / hover / drop / job — with full output paths
 - **Redact images** with black boxes, Undo and a pixel-replaced export
 - **Annotate images** with the same text/shapes/ink tools as PDF
 - **Batch crop** one relative crop across a whole selection
+- **Collage** with grid, row, column and featured layouts
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
-- Atomic writes, collision naming, 38 unit tests
+- Atomic writes, collision naming, 39 unit tests
 
 Private repo: <https://github.com/j4yop/DragConvert>
 

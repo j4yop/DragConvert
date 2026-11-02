@@ -307,6 +307,38 @@ public struct ImageCropBatchSpec: Equatable, Sendable {
     }
 }
 
+public struct ImageCollageSpec: Equatable, Sendable {
+    public enum Layout: String, Sendable {
+        case grid, row, column, featured
+    }
+
+    public var layout: Layout
+    public var columns: Int
+    public var spacing: Int
+    public var cornerRadius: Int
+    public var background: ImageColor
+    public var canvasWidth: Int
+    public var format: String
+
+    public init(
+        layout: Layout = .grid,
+        columns: Int = 2,
+        spacing: Int = 16,
+        cornerRadius: Int = 12,
+        background: ImageColor = ImageColor(red: 1, green: 1, blue: 1),
+        canvasWidth: Int = 1600,
+        format: String = "png"
+    ) {
+        self.layout = layout
+        self.columns = columns
+        self.spacing = spacing
+        self.cornerRadius = cornerRadius
+        self.background = background
+        self.canvasWidth = canvasWidth
+        self.format = format
+    }
+}
+
 public struct ImageAnnotateSpec: Equatable, Sendable {
     public var annotations: [PDFAnnotationSpec]
     public var format: String
@@ -335,6 +367,7 @@ public enum JobOperation: Equatable, Sendable {
     case imageRedact(ImageRedactSpec)
     case imageAnnotate(ImageAnnotateSpec)
     case imageCropBatch(ImageCropBatchSpec)
+    case imageCollage(ImageCollageSpec)
     case tool(id: String)
 }
 
