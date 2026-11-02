@@ -299,6 +299,14 @@ public struct ImageRedactSpec: Equatable, Sendable {
     }
 }
 
+public struct ImageCropBatchSpec: Equatable, Sendable {
+    public var normalized: PDFRect
+
+    public init(normalized: PDFRect) {
+        self.normalized = normalized
+    }
+}
+
 public struct ImageAnnotateSpec: Equatable, Sendable {
     public var annotations: [PDFAnnotationSpec]
     public var format: String
@@ -326,6 +334,7 @@ public enum JobOperation: Equatable, Sendable {
     case imageFrame(ImageFrameSpec)
     case imageRedact(ImageRedactSpec)
     case imageAnnotate(ImageAnnotateSpec)
+    case imageCropBatch(ImageCropBatchSpec)
     case tool(id: String)
 }
 

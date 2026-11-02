@@ -133,6 +133,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             presentRedact(for: [URL(fileURLWithPath: path)])
         }
 
+        if let index = CommandLine.arguments.firstIndex(of: "--crop-batch-demo"),
+           CommandLine.arguments.count > index + 2 {
+            let first = URL(fileURLWithPath: CommandLine.arguments[index + 1])
+            let second = URL(fileURLWithPath: CommandLine.arguments[index + 2])
+            presentCrop(for: [first, second])
+        }
+
         if let index = CommandLine.arguments.firstIndex(of: "--annotate-image-demo"),
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
@@ -438,13 +445,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // bookmark is active before the crop window loads it.
         _ = FolderAccess.shared.ensureAccess()
 
+        let images = urls.filter { FileKind.detect($0) == .image }
+        if urls.count > 1 {
+            guard images.count == urls.count else {
+                hud.fail("Select only images to batch crop")
+                return
+            }
+            guard let controller = CropWindowController(
+                url: images[0], batchCount: images.count
+            ) else {
+                hud.fail("Couldn’t open that image")
+                return
+            }
+            controller.onApply = { [weak self] _, normalized in
+                self?.runCropBatch(images, normalized: normalized)
+            }
+            cropWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
         switch FileKind.detect(input) {
         case .image:
             guard let controller = CropWindowController(url: input) else {
                 hud.fail("Couldn’t open that image")
                 return
             }
-            controller.onApply = { [weak self] rect in
+            controller.onApply = { [weak self] rect, _ in
                 self?.runCrop(input: input, rect: rect)
             }
             cropWindow = controller
@@ -1034,6 +1062,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.hud.fail(error.friendlyMessage)
                 NSSound.beep()
                 Log.write("adjust failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func runCropBatch(_ images: [URL], normalized: PDFRect) {
+        let job = Job(
+            inputs: images,
+            operation: .imageCropBatch(ImageCropBatchSpec(normalized: normalized))
+        )
+        hud.onCancel = { [weak self] in self?.cropTask?.cancel() }
+        hud.show(title: "Cropping \(images.count) images", subtitle: "Preparing…")
+
+        cropTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageCropBatchEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.hud.succeed(
+                    title: "Batch crop",
+                    subtitle: "\(outputs.count) images"
+                )
+                NSSound(named: "Glass")?.play()
+                Log.write("batch crop done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("batch crop failed: \(error.localizedDescription)")
             }
         }
     }

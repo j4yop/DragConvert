@@ -1,4 +1,5 @@
 import AppKit
+import JobCore
 
 /// Image preview with a draggable crop rectangle.
 /// Eight handles, move inside the rect, optional aspect lock.
@@ -131,6 +132,20 @@ final class CropCanvas: NSView {
             y: ((imageRect.maxY - cropRect.maxY) * sy).rounded(),
             width: (cropRect.width * sx).rounded(),
             height: (cropRect.height * sy).rounded()
+        )
+    }
+
+    /// Crop rect normalised to 0...1 with a top-left origin, for batch crops.
+    func normalizedCrop() -> PDFRect {
+        let rect = imageRect
+        guard rect.width > 0, rect.height > 0 else {
+            return PDFRect(x: 0, y: 0, width: 0, height: 0)
+        }
+        return PDFRect(
+            x: Double((cropRect.minX - rect.minX) / rect.width),
+            y: Double((rect.maxY - cropRect.maxY) / rect.height),
+            width: Double(cropRect.width / rect.width),
+            height: Double(cropRect.height / rect.height)
         )
     }
 

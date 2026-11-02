@@ -50,6 +50,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **IMG-9 · Add background** — colour or image background, blur, padding, rounded corners, shadow, live preview, PNG/JPG; 2 engine tests
 - [x] **IMG-10 · Redact images** — drag black boxes, Undo, live count, exports a copy with the pixels replaced; engine test
 - [x] **IMG-11 · Annotate images** — text, rect, ellipse, arrow, ink, colour, undo, flattened export; engine test
+- [x] **IMG-1b · Batch crop** — one relative crop applied to every selected image, each output beside its source; engine test
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -74,8 +75,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **IMG-1b · Batch crop** — 0.5d ← next
-  Acceptance: select 5 images, crop the first, apply the same rect to all 5, outputs “<name> Cropped.jpg”.
+- [ ] **IMG-12 · Collage** — 2d ← next
+  Acceptance: 5 images → grid/row/column layout, spacing and background controls, one PNG output.
 
 ---
 

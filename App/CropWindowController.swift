@@ -1,9 +1,11 @@
 import AppKit
 import ImageEngine
+import JobCore
 
 final class CropWindowController: NSWindowController {
-    var onApply: ((CGRect) -> Void)?
+    var onApply: ((CGRect, PDFRect) -> Void)?
 
+    private let batchCount: Int
     private let canvas = CropCanvas()
     private let widthField = NSTextField(labelWithString: "0")
     private let heightField = NSTextField(labelWithString: "0")
@@ -16,10 +18,11 @@ final class CropWindowController: NSWindowController {
     private let resetButton = NSButton(title: "Reset", target: nil, action: nil)
     private let applyButton = NSButton(title: "Apply", target: nil, action: nil)
 
-    init?(url: URL) {
+    init?(url: URL, batchCount: Int = 1) {
         guard let sourceSize = ImageConvertEngine.imageSize(at: url),
               let preview = ImageConvertEngine.loadPreview(at: url, maxPixel: 1800)
         else { return nil }
+        self.batchCount = batchCount
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 560, height: 680),
@@ -119,9 +122,10 @@ final class CropWindowController: NSWindowController {
         buttonsRow.spacing = 12
         buttonsRow.distribution = .fill
 
-        let hint = NSTextField(
-            labelWithString: "Drag any of the eight handles, or type an exact size."
-        )
+        let hintText = batchCount > 1
+            ? "Drag a handle or type a size. The same relative crop is applied to \(batchCount) images."
+            : "Drag any of the eight handles, or type an exact size."
+        let hint = NSTextField(labelWithString: hintText)
         hint.font = .systemFont(ofSize: 11)
         hint.textColor = .tertiaryLabelColor
 
@@ -181,7 +185,7 @@ final class CropWindowController: NSWindowController {
     @objc private func applyCrop() {
         let rect = canvas.sourcePixelRect()
         guard rect.width >= 1, rect.height >= 1 else { return }
-        onApply?(rect)
+        onApply?(rect, canvas.normalizedCrop())
         close()
     }
 }
