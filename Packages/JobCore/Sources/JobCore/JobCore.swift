@@ -44,10 +44,37 @@ public struct ImageEditSpec: Equatable, Sendable {
     }
 }
 
+public struct CompressSpec: Equatable, Sendable {
+    public enum Mode: String, Sendable {
+        case targetSize, quality
+    }
+
+    public var mode: Mode
+    public var targetBytes: Int
+    public var quality: Double
+    public var allowResize: Bool
+    public var format: String
+
+    public init(
+        mode: Mode,
+        targetBytes: Int = 500 * 1024,
+        quality: Double = 0.75,
+        allowResize: Bool = true,
+        format: String
+    ) {
+        self.mode = mode
+        self.targetBytes = targetBytes
+        self.quality = quality
+        self.allowResize = allowResize
+        self.format = format
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
     case edit(ImageEditSpec)
+    case compress(CompressSpec)
     case tool(id: String)
 }
 

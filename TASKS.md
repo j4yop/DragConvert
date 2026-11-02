@@ -7,7 +7,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | | Done | Target |
 |---|---|---|
 | Conversion paths | 9 | ~270 |
-| Tools | 3 (crop, resize, rotate) | 26 |
+| Tools | 4 (crop, resize, rotate, compress) | 26 |
 | File actions | 0 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
 | Unit tests | 8 | 120+ |
@@ -35,6 +35,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **WHEEL-1a · Hover haptics** — alignment feedback on wedge change
 - [x] **IMG-1 · Crop panel** — image preview, dark scrim, 4 corner handles, aspect presets, live W/H px, Reset/Apply, writes “<name> Cropped.<ext>”; engine covered by 2 tests
 - [x] **IMG-2 · Resize + rotate** — “Adjust Image” window: W/H px with lock aspect, 90° left/right, flip H/V, live preview, Reset/Apply; writes “Resized”, “Rotated” or “Edited”; 4 engine tests
+- [x] **IMG-3 · Compress to target size** — target KB or quality %, iterative JPEG/HEIC search, optional downscale, never inflates, copies when already smaller; 3 engine tests
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -59,8 +60,8 @@ does not reliably receive `performDragOperation`.
 - [ ] **IMG-1b · Batch crop** — 0.5d
   Acceptance: 5 images → crop panel for the first, same rect applied to all 5, outputs “<name> Cropped.jpg”.
 
-- [ ] **IMG-3 · Compress to target size** — 2d ← next
-  Acceptance: “target 500 KB” or “quality 70 %” on JPG/PNG/HEIC; iterative search; never enlarges; reports the achieved size.
+- [ ] **IMG-6 · Metadata read + strip** — 1.5d ← next
+  Acceptance: show camera, lens, GPS, dates and orientation for a JPEG/HEIC; “Strip metadata” writes a copy without EXIF and reports the removed fields.
 
 - [ ] **IMG-8 · Crop panel polish** — 1d
   Acceptance: 8 handles (edges too), editable W/H fields, 0.5 s open for a 50 MP image.

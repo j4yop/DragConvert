@@ -30,6 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cropTask: Task<Void, Never>?
     private var adjustWindow: ImageAdjustWindowController?
     private var adjustTask: Task<Void, Never>?
+    private var compressWindow: CompressWindowController?
+    private var compressTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.write("launched")
@@ -62,6 +64,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentAdjust(for: [URL(fileURLWithPath: path)], mode: .resize)
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--compress-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentCompress(for: [URL(fileURLWithPath: path)])
         }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
@@ -181,6 +189,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        if item.id == "tool:compress" {
+            presentCompress(for: urls)
+            return
+        }
+
         guard item.id.hasPrefix("convert:") else {
             NSSound.beep()
             Log.write("not implemented: \(item.id)")
@@ -293,6 +306,67 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cropWindow = controller
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: Compress
+
+    private func presentCompress(for urls: [URL]) {
+        guard let input = urls.first else { return }
+        guard FileKind.detect(input) == .image else {
+            hud.fail("PDF and video compression are next")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+        let controller = CompressWindowController(url: input)
+        controller.onApply = { [weak self] spec in
+            self?.runCompress(input: input, spec: spec)
+        }
+        compressWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runCompress(input: URL, spec: CompressSpec) {
+        let job = Job(inputs: [input], operation: .compress(spec))
+
+        hud.onCancel = { [weak self] in self?.compressTask?.cancel() }
+        hud.show(title: "Compressing", subtitle: "Preparing…")
+
+        compressTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await ImageCompressEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.announceCompression(input: input, outputs: outputs)
+                NSSound(named: "Glass")?.play()
+                Log.write("compress done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("compress failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func announceCompression(input: URL, outputs: [URL]) {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+
+        let inBytes = ((try? FileManager.default.attributesOfItem(atPath: input.path))?[.size] as? NSNumber)?.intValue ?? 0
+        guard let output = outputs.first else {
+            hud.succeed(title: "Compressed", subtitle: "")
+            return
+        }
+        let outBytes = ((try? FileManager.default.attributesOfItem(atPath: output.path))?[.size] as? NSNumber)?.intValue ?? 0
+        let size = formatter.string(fromByteCount: Int64(outBytes))
+
+        if inBytes > 0, outBytes < inBytes {
+            let saved = Int(((1 - Double(outBytes) / Double(inBytes)) * 100).rounded())
+            hud.succeed(title: "Compressed", subtitle: "\(size) · −\(saved)%")
+        } else {
+            hud.succeed(title: "Compressed", subtitle: "\(size) · already small")
+        }
     }
 
     // MARK: Resize + rotate
