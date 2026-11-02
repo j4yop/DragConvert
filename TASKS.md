@@ -6,11 +6,11 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 
 | | Done | Target |
 |---|---|---|
-| Conversion paths | 9 | ~270 |
-| Tools | 17 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate img+PDF, redact img+PDF, add BG img+PDF, collage, remove BG, read QR, edit photo) | 26 |
-| File actions | 6 | 6 |
-| Families | 3 (image, PDF, partial docs) | 9 |
-| Unit tests | 46 | 120+ |
+| Conversion paths | ~42 working image/PDF paths | ~270 |
+| Tools | 17 implementations + PDF text/OCR | 26 |
+| File actions | 6 (Copy to clipboard, terminal picker) | 6 |
+| Families | 2 of 9 (images, PDF) | 9 |
+| Unit tests | 56 | 120+ |
 
 ---
 
@@ -56,11 +56,18 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **IMG-14 · Read QR** — Vision barcode decode, copyable result panel, Open Link for a URL; generated-QR test
 - [x] **PDF-9 · Add background to PDF** — frame every page on a colour or image canvas with padding and shadow, export a new PDF; engine test
 - [x] **IMG-15 · Photo editor** — brightness, contrast, saturation and warmth sliders, live preview, exported copy; 2 engine tests
-- [x] **ONB-1 · 5-step onboarding** — capsule window, animated wheel highlight, Shift/⌥⌘/⌃ keycaps, folder access, launch at login, Done; page dots
+- [x] **ONB-1 · 5-step onboarding** — capsule window, animated wheel highlight, Shift/⇧⌥/⌃ keycaps, folder access, launch at login, Done; page dots
 - [x] **ONB-2 · Folder access + finish setup** — permission button, toggle, open-source copy
 - [x] **ACT-1 · Actions wheel** — AirDrop, Float shelf (drag-out rows), Copy, Move, Copy Path, Terminal; transfer engine test
 - [x] **APP-1 · Settings** — wheel shortcut pickers, sound, reveal in Finder, conflict policy (rename/replace), launch at login; persisted and applied live
 - [x] **OPEN-1 · Free and open source** — removed the StoreKit trial/paywall; MIT licence; onboarding and Settings say free, no limits
+- [x] **TRUTH-1 · Truthful capability graph** — conversion wedges are filtered by real engines; tools are filtered by format and selection; unsupported families show a note instead of a failing action
+- [x] **WHEEL-5 · Sticky wheel** — release the modifier and keep dragging; the wheel stays until drop/Escape; tested with a simulated drag
+- [x] **WHEEL-6 · Centre preview** — dragged-file thumbnail, filename, size pill, rounded petals, hover colour and scale/fade appearance
+- [x] **ACT-5 · Copy + terminal** — Copy writes file URLs to the clipboard; Move keeps the folder picker; Terminal has an installed-app picker
+- [x] **DRAG-3 · Mixed selections + kinds** — HEIC+PNG and image+PDF convert to their shared formats; GIF is video; PPTX is slides; RTFD/text clipping recognized
+- [x] **PKG-0 · Product identity** — app icon, template menu-bar wheel, About/privacy/licences, browser update link, notarization script and packaging doc
+- [x] **IMG-16a · AVIF export** — ImageIO encoder + wheel target; headless conversion verified
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -73,58 +80,57 @@ does not reliably receive `performDragOperation`.
 Full report: `docs/TANGERINE-GAP-REPORT.md`. The wheel currently advertises
 formats with no engine. Fix truth before breadth.
 
-### P0 — truthful wheel (about 1 week)
-- [ ] **TRUTH-1 · Truthful capability graph** — 1–2d ← next
-  Acceptance: every wedge/tool offered has a working engine and a test; unsupported families are hidden or shown as “not yet,” never as a failing action.
-- [ ] **WHEEL-5 · Sticky wheel** — 2–4d
-  Acceptance: release the modifier and keep dragging; the wheel stays until drop/Escape; another mode key switches wheels.
-- [ ] **WHEEL-6 · Centre preview + motion** — 1–2d
-  Acceptance: dragged-file thumbnail, size pill, scale/fade appear; Reduce Motion respected.
-- [ ] **ACT-5 · Copy + terminal semantics** — 1d
-  Acceptance: Copy puts file URLs on the clipboard; terminal picker supports Terminal and iTerm2.
-- [ ] **DRAG-3 · Mixed selections + kinds** — 2–3d
-  Acceptance: HEIC+PNG → JPG works; GIF is video; PPTX is slides; RTFD/text clipping recognized; mixed tools show the intersection.
-- [ ] **PKG-0 · Product gate** — 3–5d
-  Acceptance: app icon, menu-bar template icon, version, notarization/update policy, privacy and licence screens.
+### P0 — truthful wheel (shipped)
+- [x] **TRUTH-1 · Truthful capability graph** — conversion + tool filtering, unsupported-family note
+- [x] **WHEEL-5 · Sticky wheel** — release the modifier, wheel stays; simulated-drag QA
+- [x] **WHEEL-6 · Centre preview + motion** — thumbnail, filename, size, rounded petals, hover, appear motion
+- [x] **ACT-5 · Copy + terminal semantics** — clipboard URLs; Terminal/iTerm2 picker
+- [x] **DRAG-3 · Mixed selections + kinds** — shared formats, GIF/PPTX/RTFD fixes
+- [x] **PKG-0 · Product gate** — icon, menu-bar icon, About/privacy/licences, update link, notarization script/docs
 
-### P1 — image/PDF depth (2–3 weeks)
-- [ ] **IMG-16 · WebP/AVIF/SVG** — 3–5d
-- [ ] **PDF-10 · OCR + PDF/A-2b** — 1–2wk
+### P1 — image/PDF depth
+- [ ] **IMG-16b · WebP/SVG** — 2–3d ← next
+  Acceptance: WebP encode via a bundled encoder (not a Homebrew path); SVG input and rasterisation; no failing wedges.
+- [ ] **PDF-10b · PDF/A-2b + Office export** — 1–2wk
+  Acceptance: PDF/A-2b output; PDF→DOCX/Pages; PPTX/XLSX/EPUB only where the fidelity is honest.
 - [ ] **IMG-17 · Metadata editor** — 3–5d
+  Acceptance: search fields, edit values, remove individual fields, remove all.
 - [ ] **IMG-18 · Photo editor depth** — 1wk
+  Acceptance: exposure, highlights, shadows, whites, blacks, gamma, temperature, tint, clarity, grain, noise reduction, detail.
 - [ ] **IMG-19 · Annotate/redact depth** — 1wk
+  Acceptance: numbered callouts, magnifiers, images; face/text detection, blur, multiple movable areas.
 - [ ] **PDF-11 · Compress/organize polish** — 3–5d
+  Acceptance: percentage/presets; preserve annotations/fields; same-width pages.
 
 ### P2 — optional media/documents (4–6 weeks)
 - [ ] **MEDIA-1 · Optional FFmpeg provider** — 2–3wk
 - [ ] **DOC-1 · Optional Pandoc/LibreOffice provider** — 2–3wk
 - [ ] **AUTO-1 · Finder selection + Shortcuts/CLI** — 1–2wk
 
+**Built in 0.3.0:** truth gate, sticky wheel, ⇧⌥, Copy clipboard, mixed selections, GIF/PPTX/RTFD, centre preview, app icon/menu bar/About/privacy/update, AVIF export, PDF→TXT/MD with local OCR, PDF annotation regression tests.
+
 **Do not build:** bundled LibreOffice, high-fidelity PDF→PPTX/XLSX, a hand-maintained 275-path graph, or a paywall.
 
 ---
 
-## NOW — next 5 working days
+## NEXT — 5 working days
 
-- [ ] **WHEEL-1b · Appear motion** — 0.5d
-  Acceptance: scale 0.86 → 1 + fade, spring 0.28/0.82, Reduce Motion = fade only.
-
+- [ ] **IMG-16b · WebP/SVG** — 2–3d ← next
+  Acceptance: WebP encode via a bundled encoder (not a Homebrew path); SVG input and rasterisation; no failing wedges.
+- [ ] **PDF-10b · PDF/A-2b + Office export** — 1–2wk
+  Acceptance: PDF/A-2b output; PDF→DOCX/Pages; PPTX/XLSX/EPUB only where the fidelity is honest.
+- [ ] **IMG-17 · Metadata editor** — 3–5d
+  Acceptance: search fields, edit values, remove individual fields, remove all.
+- [ ] **IMG-18 · Photo editor depth** — 1wk
+  Acceptance: exposure, highlights, shadows, whites, blacks, gamma, temperature, tint, clarity, grain, noise reduction, detail.
+- [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d
+  Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 - [ ] **S3 · Wheel performance** — 0.5d
   Acceptance: 120 fps with 10 wedges, < 8 % CPU, no memory growth after 50 opens, Reduce Transparency respected.
 
-- [ ] **DRAG-2 · Mixed-selection notice** — 0.5d
-  Acceptance: PDF + PNG shows “Pick files of one kind” in the HUD instead of no wheel; actions wheel still works.
-
-- [ ] **IMG-1b · Batch crop** — 0.5d
-  Acceptance: 5 images → crop panel for the first, same rect applied to all 5, outputs “<name> Cropped.jpg”.
-
-- [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d
-  Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
-
-- [ ] **APP-4 · App icon + packaging** — 1.5d
-  Acceptance: app icon and menu-bar template icon, version bump, privacy policy, dependency licences, signed bundle.
-
 ---
+
+## Archived phase plan (superseded by the AUDIT section)
 
 ## P1 — core (weeks 2–6)
 

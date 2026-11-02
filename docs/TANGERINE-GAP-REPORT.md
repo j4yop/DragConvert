@@ -4,6 +4,8 @@
 **Scope:** Tangerine's current website, tools pages, press kit, demo video, App Store listing (v2.0.2), release notes, independent reviews, and the public launch discussion; audited against the DragConvert source tree.  
 **Method:** Direct page/JS/JSON scraping, press-kit and tool-window screenshots, App Store/iTunes metadata, Agent Reach web/Reddit research, and a five-advisor council with anonymous peer review. No Tangerine code or assets were copied.
 
+> **Implementation update — 3 November 2026 (0.3.0):** the P0 interaction release is built. The wheel now filters every wedge through a working engine, stays open after the modifier is released, defaults to ⇧⌥, puts Copy on the clipboard, handles mixed image/PDF selections and correct GIF/PPTX/RTFD kinds, draws a thumbnail + size in the centre, and ships with an app icon, menu-bar template, About/privacy/licences and an update link. AVIF export and PDF→TXT/Markdown with local OCR are in; PDF balanced compression and PDF→image annotation regression tests pass. Remaining: WebP/SVG, PDF/A-2b and PDF→Office, metadata editing, deeper photo/annotate/redact controls, video/audio/documents, hide-menu-bar and real Dock-drag QA. See `TASKS.md` for the live status.
+
 ---
 
 ## Bottom line

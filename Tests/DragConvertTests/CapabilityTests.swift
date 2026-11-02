@@ -2,6 +2,7 @@ import XCTest
 import AppKit
 @testable import CapabilityGraph
 @testable import JobCore
+@testable import ImageEngine
 
 final class CapabilityTests: XCTestCase {
 
@@ -12,13 +13,17 @@ final class CapabilityTests: XCTestCase {
             ("a.svg", .image),
             ("a.docx", .document),
             ("a.pages", .document),
-            ("a.pptx", .document),
+            ("a.pptx", .slides),
+            ("a.ppt", .slides),
             ("a.xlsx", .spreadsheet),
             ("a.csv", .spreadsheet),
             ("a.mp3", .audio),
             ("a.flac", .audio),
             ("a.mp4", .video),
             ("a.mkv", .video),
+            ("a.gif", .video),
+            ("a.rtfd", .document),
+            ("a.textClipping", .document),
             ("a.srt", .subtitle),
             ("a.zip", .archive),
             ("a.unknownext", .unknown)
@@ -65,10 +70,60 @@ final class CapabilityTests: XCTestCase {
 
     func testModifierRouting() {
         XCTAssertEqual(WheelMode.from(.shift), .convert)
-        XCTAssertEqual(WheelMode.from([.option, .command]), .tools)
+        XCTAssertEqual(WheelMode.from([.option, .shift]), .tools)
         XCTAssertEqual(WheelMode.from(.control), .actions)
         XCTAssertEqual(WheelMode.from([.control, .shift]), .actions)
         XCTAssertNil(WheelMode.from([]))
+    }
+
+    func testSVGIsNotAdvertisedUntilResvgShips() {
+        let svg = URL(fileURLWithPath: "/tmp/vector.svg")
+        let job = Job(inputs: [svg], operation: .convert(to: "png"))
+        XCTAssertFalse(ImageConvertEngine().canHandle(job))
+    }
+
+    func testWheelStaysOpenAfterModifierRelease() {
+        var tracker = WheelModeTracker()
+        XCTAssertEqual(tracker.update(modifiers: .shift), .convert)
+        XCTAssertEqual(tracker.update(modifiers: []), .convert)
+        XCTAssertEqual(tracker.update(modifiers: [.option, .shift]), .tools)
+        XCTAssertEqual(tracker.update(modifiers: []), .tools)
+        tracker.reset()
+        XCTAssertNil(tracker.update(modifiers: []))
+    }
+
+    func testSingleFileHidesMergeAndCollage() {
+        XCTAssertFalse(Capabilities.tools(.image, fileCount: 1).contains { $0.id == "tool:collage" })
+        XCTAssertFalse(Capabilities.tools(.pdf, fileCount: 1).contains { $0.id == "tool:merge" })
+    }
+
+    func testMixedImagesShareCommonTargets() {
+        let items = Capabilities.convertItems(
+            kinds: [.image, .image],
+            inputExtensions: ["heic", "png"]
+        )
+        XCTAssertTrue(items.contains { $0.id == "convert:jpg" })
+        XCTAssertFalse(items.contains { $0.id == "convert:docx" })
+    }
+
+    func testMixedImageAndPDFUseTheIntersection() {
+        let items = Capabilities.convertItems(
+            kinds: [.image, .pdf],
+            inputExtensions: ["png", "pdf"]
+        )
+        XCTAssertEqual(items.map(\.id), ["convert:jpg", "convert:png", "convert:tiff"])
+    }
+
+    func testMultiFileToolsAreTruthful() {
+        XCTAssertEqual(
+            Set(Capabilities.tools(.image, fileCount: 2).map(\.id)),
+            ["tool:crop", "tool:collage"]
+        )
+        XCTAssertEqual(
+            Capabilities.tools(.pdf, fileCount: 2).map(\.id),
+            ["tool:merge"]
+        )
+        XCTAssertTrue(Capabilities.tools(.video, fileCount: 2).isEmpty)
     }
 
     func testCollisionNaming() {

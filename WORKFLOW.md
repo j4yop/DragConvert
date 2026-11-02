@@ -98,7 +98,7 @@ Budgets: wheel ≤ 80 ms, idle CPU ≈ 0, 10 MB image ≤ 400 ms, PDF page ≤ 2
 | → Thu | **WHEEL-1b** appear motion + **S3** performance | “10 wedges at 120 fps, no leaks.” |
 | → Fri | **DRAG-2** mixed selection + demo | “A mixed selection tells me what to do.” |
 
-**3 Nov 2026 — Tangerine audit complete.** Every image/PDF wedge, onboarding, the Actions wheel and Settings are done. DragConvert is free and MIT-licensed. The wheel currently advertises formats with no engine, so the next release is the **Truthful Wheel**: hide unimplemented targets, sticky wheel, ⇧⌥ default, Copy-to-clipboard, mixed selections, centre preview, packaging. Then WebP/AVIF, PDF OCR/PDF-A, and optional FFmpeg. Full report: `docs/TANGERINE-GAP-REPORT.md`.
+**3 Nov 2026 — Truthful Wheel shipped (0.3.0).** The wheel is engine-filtered, sticky after the modifier is released, defaults to ⇧⌥, and has a thumbnail/size centre. Copy uses the clipboard, mixed image/PDF selections convert, GIF/PPTX/RTFD kinds are correct, and the app has an icon, template menu-bar item, About/privacy/licences, an update link and a notarization script. AVIF export and PDF→TXT/Markdown with local OCR are in. Next: WebP/SVG, PDF/A-2b + PDF→Office, metadata editor, deeper photo/annotate/redact controls, then optional FFmpeg for audio/video. Full report: `docs/TANGERINE-GAP-REPORT.md`.
 
 **Blocked decision:** keyboard navigation (**WHEEL-2**) needs either Input Monitoring (listen-only event tap) or activating the panel (loses Finder focus). Decide in week 3; do not let it block the image tools.
 

@@ -3,6 +3,21 @@ import XCTest
 
 final class FileActionsTests: XCTestCase {
 
+    func testCopyPutsFileURLsOnThePasteboard() {
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("DragConvertTests"))
+        pasteboard.clearContents()
+        let urls = [
+            URL(fileURLWithPath: "/tmp/one.jpg"),
+            URL(fileURLWithPath: "/tmp/two.pdf")
+        ]
+        FileActions.copyToPasteboard(urls, pasteboard: pasteboard)
+        let objects = pasteboard.readObjects(
+            forClasses: [NSURL.self],
+            options: [.urlReadingFileURLsOnly: true]
+        ) as? [URL] ?? []
+        XCTAssertEqual(objects.map(\.path), urls.map(\.path))
+    }
+
     func testCopyMoveAndSameFolderNoOp() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)

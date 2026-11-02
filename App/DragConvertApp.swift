@@ -39,9 +39,12 @@ struct DragConvertApp {
         let job = Job(inputs: [input], operation: .convert(to: target))
         let engine: Engine?
         switch FileKind.detect(input) {
-        case .pdf: engine = PDFToImageEngine()
-        case .image: engine = ImageConvertEngine()
-        default: engine = nil
+        case .pdf:
+            engine = (target == "txt" || target == "md") ? PDFTextEngine() : PDFToImageEngine()
+        case .image:
+            engine = ImageConvertEngine()
+        default:
+            engine = nil
         }
         guard let engine, engine.canHandle(job) else {
             FileHandle.standardError.write(Data("unsupported conversion\n".utf8))

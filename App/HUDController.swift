@@ -36,6 +36,14 @@ final class HUDController {
         scheduleDismiss(after: 4.5)
     }
 
+    func note(title: String, subtitle: String) {
+        dismissWork?.cancel()
+        content.apply(title: title, subtitle: subtitle, state: .info)
+        position()
+        panel.orderFrontRegardless()
+        scheduleDismiss(after: 2.8)
+    }
+
     func hide() {
         dismissWork?.cancel()
         panel.orderOut(nil)
@@ -85,7 +93,7 @@ final class HUDPanel: NSPanel {
 }
 
 final class HUDContentView: NSView {
-    enum State { case running, success, failure }
+    enum State { case running, success, failure, info }
 
     var onCancel: (() -> Void)?
     private(set) var title = ""
@@ -202,6 +210,12 @@ final class HUDContentView: NSView {
             progress.doubleValue = 100
         case .failure:
             icon.image = symbol("exclamationmark.triangle.fill", color: .systemOrange)
+            cancelButton.isHidden = true
+            progress.stopAnimation(nil)
+            progress.isIndeterminate = false
+            progress.doubleValue = 0
+        case .info:
+            icon.image = symbol("sparkles", color: accent)
             cancelButton.isHidden = true
             progress.stopAnimation(nil)
             progress.isIndeterminate = false

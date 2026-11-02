@@ -2,7 +2,7 @@ APP_NAME := DragConvert
 BUNDLE   := build/$(APP_NAME).app
 LOG      := $(HOME)/Library/Containers/com.dragconvert.app/Data/Library/Logs/dragconvert.log
 
-.PHONY: help build test run bundle sign generate open clean convert log
+.PHONY: help build test run bundle sign generate open clean convert log notarize icon
 
 help:
 	@echo "make build      Build the SwiftPM package"
@@ -11,6 +11,8 @@ help:
 	@echo "make log        Show the app's drag/conversion log"
 	@echo "make open       Open the Xcode project (needs xcodegen)"
 	@echo "make convert file=<path> to=<ext>"
+	@echo "make icon       Regenerate the app icon"
+	@echo "make notarize   Sign + notarize a Developer ID build"
 	@echo "make clean      Remove build artefacts"
 
 build:
@@ -38,6 +40,20 @@ generate:
 
 open: generate
 	open $(APP_NAME).xcodeproj
+
+icon:
+	@swift scripts/make-icon.swift
+	@rm -rf Config/AppIcon.iconset && mkdir -p Config/AppIcon.iconset
+	@for s in 16 32 128 256 512; do \
+		sips -z $$s $$s Config/AppIcon-1024.png --out "Config/AppIcon.iconset/icon_$${s}x$${s}.png" >/dev/null; \
+		d=$$((s*2)); sips -z $$d $$d Config/AppIcon-1024.png --out "Config/AppIcon.iconset/icon_$${s}x$${s}@2x.png" >/dev/null; \
+	done
+	@sips -z 1024 1024 Config/AppIcon-1024.png --out Config/AppIcon.iconset/icon_512x512@2x.png >/dev/null
+	@iconutil -c icns Config/AppIcon.iconset -o Config/AppIcon.icns
+	@rm -rf Config/AppIcon.iconset
+
+notarize:
+	@./scripts/notarize.sh
 
 convert:
 	@test -n "$(file)" || { echo "usage: make convert file=<path> to=<ext>"; exit 1; }

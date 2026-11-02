@@ -81,11 +81,31 @@ public final class DragMonitor {
 
     private func readFileURLs() -> [URL] {
         let pb = NSPasteboard(name: .drag)
-        guard let types = pb.types, types.contains(.fileURL) else { return [] }
-        let objects = pb.readObjects(
-            forClasses: [NSURL.self],
-            options: [.urlReadingFileURLsOnly: true]
-        ) ?? []
-        return objects.compactMap { ($0 as? NSURL).map { $0 as URL } }
+        guard let types = pb.types else { return [] }
+
+        if types.contains(.fileURL) {
+            let objects = pb.readObjects(
+                forClasses: [NSURL.self],
+                options: [.urlReadingFileURLsOnly: true]
+            ) ?? []
+            let urls = objects.compactMap { ($0 as? NSURL).map { $0 as URL } }
+            if !urls.isEmpty { return urls }
+        }
+
+        // Some drag sources (notably older Dock/Finder paths) still publish
+        // the legacy filename list rather than a modern fileURL.
+        if let paths = pb.propertyList(
+            forType: NSPasteboard.PasteboardType("NSFilenamesPboardType")
+        ) as? [String] {
+            return paths.map { URL(fileURLWithPath: $0) }
+        }
+
+        if let string = pb.string(forType: .fileURL),
+           let url = URL(string: string),
+           url.isFileURL {
+            return [url]
+        }
+
+        return []
     }
 }

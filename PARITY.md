@@ -12,9 +12,9 @@ Legend: **✅** shipped · **➕** planned · **⚠️** fidelity caveat · **�
 
 | Metric | Reference | Our target | Shipped today |
 |---|---|---|---|
-| Conversion paths | 275 | ~270 | ~34 image/PDF paths |
-| File tools | 26 (22 generic + 4 PDF variants) | 26 advertised + 8 extras | 17 implementations, images/PDF only |
-| File actions | 6 | 6 | 6 nominal; Copy/Terminal semantics differ |
+| Conversion paths | 275 | ~270 | ~42 image/PDF paths |
+| File tools | 26 (22 generic + 4 PDF variants) | 26 advertised + 8 extras | 17 implementations + PDF text/OCR |
+| File actions | 6 | 6 | 6; Copy and Terminal now match |
 | File families | 9 | 9 | 2 (images, PDF) |
 | Price | $29.99 one-time, 20-file trial | Free and open source (MIT), no limits | Free, MIT |
 
@@ -26,11 +26,11 @@ Legend: **✅** shipped · **➕** planned · **⚠️** fidelity caveat · **�
 
 | | |
 |---|---|
-| Input | JPG, PNG, WebP, HEIC, TIFF, AVIF, BMP, **SVG (input only)**, GIF |
+| Input | JPG, PNG, WebP, HEIC, TIFF, AVIF, BMP, **SVG (input only)** |
 | Output | JPG, PNG, WebP, HEIC, TIFF, AVIF, BMP, **PDF** |
-| Reference note | “PDF export · SVG input only” |
+| Reference note | “PDF export · SVG input only” · GIF is a video format |
 | Engine | ImageIO · libwebp · libavif · resvg |
-| Status | ✅ JPG/PNG/HEIC/TIFF/BMP/PDF · ⏳ WebP/AVIF/SVG |
+| Status | ✅ JPG/PNG/HEIC/TIFF/BMP/PDF/AVIF · ⏳ WebP/SVG |
 
 ### 2.2 Audio
 
@@ -57,7 +57,7 @@ Legend: **✅** shipped · **➕** planned · **⚠️** fidelity caveat · **�
 | Input | PDF |
 | Output | **DOCX, PAGES, PPTX, XLSX**, JPG, PNG, EPUB, TXT, MD, **PDF/A-2b** |
 | Reference note | “All pages · images at 300 DPI” · local OCR for scanned pages (2.0.2 adds PDF/A-2b) |
-| Status | ✅ JPG/PNG/TIFF · ⏳ DOCX/PAGES/PPTX/XLSX/EPUB/TXT/MD/PDF-A · ❌ OCR |
+| Status | ✅ JPG/PNG/TIFF/TXT/MD (selectable + local OCR) · ⏳ DOCX/PAGES/PPTX/XLSX/EPUB/PDF-A |
 
 ### 2.5 Documents
 
@@ -189,8 +189,8 @@ Every tool’s UI states its tier in one line.
 
 | Family | Working paths | Status |
 |---|---|---|
-| Images | ~30–40 of ~65 | 🟡 JPG/PNG/HEIC/TIFF/BMP/PDF; GIF first frame; WebP/AVIF/SVG offered but no encoder |
-| PDF | 4 of ~9 | 🟡 JPG/PNG/TIFF + tools; Office/EPUB/text/PDF-A unsupported |
+| Images | ~40 of ~65 | 🟡 JPG/PNG/HEIC/TIFF/BMP/PDF/AVIF; WebP/SVG still hidden by the truth gate |
+| PDF | 6 of ~11 | 🟡 JPG/PNG/TIFF/TXT/MD + tools; Office/EPUB/PDF-A unsupported |
 | Documents | 0 | ⏳ advertised but no engine |
 | Slides | 0 | ⏳ PPTX misclassified as document |
 | Spreadsheets | 0 | ⏳ advertised but no engine |
@@ -199,8 +199,8 @@ Every tool’s UI states its tier in one line.
 | Video | 0 | ⏳ advertised but no engine |
 | Subtitles | 0 | ⏳ advertised but no engine |
 | Archives | 0 | ⏳ advertised but no engine |
-| **Total** | **~34 of ~275** | **2 of 9 families; ~12–15 % of paths** |
+| **Total** | **~42 of ~275** | **2 of 9 families; ~15 % of paths** |
 
-Tools shipped: 17 implementations (images/PDF). Actions shipped: 6 nominal; **Copy copies to a folder instead of the clipboard**, and Terminal is hard-coded.
+Tools shipped: 17 implementations + PDF text/OCR. Actions shipped: 6, with **Copy to clipboard** and the **Terminal app picker** now matching.
 
-**The wheel currently offers many more targets than the engines support.** That is the P0 issue; see `docs/TANGERINE-GAP-REPORT.md`.
+**The truth gate is now in place:** unimplemented families and formats are hidden and produce a short “Nothing here yet” note, not a failing wedge. See `docs/TANGERINE-GAP-REPORT.md` and `TASKS.md`.

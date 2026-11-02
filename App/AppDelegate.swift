@@ -1,4 +1,5 @@
 import AppKit
+import PDFKit
 import SwiftUI
 import DragSense
 import CapabilityGraph
@@ -15,11 +16,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let wheel = WheelController()
     private var onboardingWindow: OnboardingWindowController?
     private var settingsWindow: SettingsWindowController?
+    private var aboutWindow: AboutWindowController?
     private var lastOutputs: [URL] = []
 
     private var lastSession: FileDragSession?
     private var lastSignature: String?
     private var lastHoveredID: String?
+    /// The last wheel selected during this drag. Tangerine keeps the wheel
+    /// alive after the modifier is released, so this outlives the modifier
+    /// flags. It resets when the drag ends.
+    private var modeTracker = WheelModeTracker()
+    private var wheelDismissed = false
+    private var lastUnsupportedKey: String?
+    private var currentPreview: WheelPreview?
+    private var currentPreviewKey: String?
     /// The polled-pointer fallback and `performDragOperation` can both fire for
     /// the same release. Deduplicate so we never convert twice.
     private var lastPerform: (key: String, date: Date)?
@@ -54,6 +64,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.write("launched")
+        UserDefaults.standard.register(defaults: [
+            "revealOnFinish": true,
+            "soundEnabled": true,
+            "hapticsEnabled": true
+        ])
         setUpStatusItem()
 
         wheel.onDrop = { [weak self] item, urls in
@@ -65,6 +80,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self, let files = self.lastSession?.files, !files.isEmpty else { return }
             Log.write("keyboard activate \(item.id)")
             self.perform(item: item, on: files)
+        }
+
+        wheel.onCancel = { [weak self] in
+            Log.write("wheel dismissed with Escape")
+            self?.wheelDismissed = true
         }
 
         monitor.onChange = { [weak self] session in
@@ -192,9 +212,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             presentFrame(for: [URL(fileURLWithPath: path)])
         }
 
-        if CommandLine.arguments.contains("--wheel-demo") {
-            let items = Capabilities.items(mode: .actions, kind: .pdf)
-            wheel.show(items: items, at: NSEvent.mouseLocation, label: "Panel.pdf")
+        if let demoIndex = CommandLine.arguments.firstIndex(of: "--wheel-demo") {
+            let path = demoIndex + 1 < CommandLine.arguments.count
+                && !CommandLine.arguments[demoIndex + 1].hasPrefix("--")
+                ? CommandLine.arguments[demoIndex + 1]
+                : ""
+            let files = path.isEmpty ? [] : [URL(fileURLWithPath: path)]
+            let mode: WheelMode = CommandLine.arguments.contains("--wheel-tools") ? .tools : .convert
+            let items = files.isEmpty
+                ? Capabilities.items(mode: .actions, kind: .pdf)
+                : validItems(mode: mode, files: files)
+            let preview = files.isEmpty
+                ? WheelPreview(
+                    image: NSWorkspace.shared.icon(forFile: "/System/Library/CoreServices/Finder.app"),
+                    fileName: "Actions",
+                    fileSize: "6 actions",
+                    isMultiple: false
+                )
+                : wheelPreview(for: files)
+            if !items.isEmpty {
+                wheel.show(items: items, at: NSEvent.mouseLocation, preview: preview)
+                if let hoverIndex = CommandLine.arguments.firstIndex(of: "--wheel-hover"),
+                   hoverIndex + 1 < CommandLine.arguments.count,
+                   let index = Int(CommandLine.arguments[hoverIndex + 1]) {
+                    wheel.highlight(index)
+                }
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 Log.write("wheel demo key=\(self.wheel.isKeyWindow) visible=\(self.wheel.visible) appActive=\(NSApp.isActive) front=\(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "nil")")
             }
@@ -202,6 +245,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if CommandLine.arguments.contains("--settings-demo") {
             showSettings()
+        }
+
+        if CommandLine.arguments.contains("--about-demo") {
+            showAbout()
         }
 
         if let index = CommandLine.arguments.firstIndex(of: "--shelf-demo") {
@@ -231,11 +278,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Menu bar
 
     private func setUpStatusItem() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.title = "◎"
-        item.button?.toolTip = "Drag a file, then hold ⇧ to convert, ⌥⌘ for tools, ⌃ for actions"
+        let item = NSStatusBar.system.statusItem(withLength: 24)
+        StatusIcon.apply(to: item.button)
+        Log.write("status item visible=\(item.isVisible) button=\(item.button != nil)")
+        item.button?.toolTip = "Drag a file, then hold ⇧ to convert, ⇧⌥ for tools, ⌃ for actions"
 
         let menu = NSMenu()
+        menu.addItem(NSMenuItem(title: "About DragConvert", action: #selector(showAbout), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: ""))
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "How it works…", action: #selector(showWelcome), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "Grant Folder Access…", action: #selector(grantFolderAccess), keyEquivalent: ""))
@@ -255,35 +306,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         if wheel.isLocked { return }
+        if wheelDismissed { return }
         lastSession = session
 
-        guard let mode = WheelMode.from(session.modifiers) else {
+        // Tap once to open. Releasing the key must not close the wheel; that
+        // is the Tangerine/OpenShelf behaviour and the whole point of the
+        // deliberate radial selection.
+        guard let mode = modeTracker.update(modifiers: session.modifiers) else {
             wheel.hide()
             return
         }
 
-        let kind = FileKind.commonKind(of: session.files) ?? .unknown
-        if kind == .unknown && mode != .actions {
+        let kinds = session.files.map(FileKind.detect)
+        let items = validItems(mode: mode, files: session.files)
+        if items.isEmpty {
             wheel.hide()
+            if lastUnsupportedKey != session.signature {
+                lastUnsupportedKey = session.signature
+                hud.note(
+                    title: "Nothing here yet",
+                    subtitle: unsupportedMessage(mode: mode, kinds: kinds)
+                )
+            }
             return
         }
 
-        let extensionName = session.files.first?.pathExtension
-        let items = Capabilities.items(
-            mode: mode,
-            kind: kind,
-            inputExtension: extensionName
-        )
-        let label = session.files.count == 1
-            ? session.files[0].lastPathComponent
-            : "\(session.files.count) files"
-
+        let preview = wheelPreview(for: session.files)
         if lastSignature != session.signature {
             lastSignature = session.signature
-            Log.write("drag \(session.files.count) file(s) mode=\(mode.rawValue) kind=\(kind.rawValue) items=\(items.count)")
+            let kindList = kinds.map(\.rawValue).joined(separator: ",")
+            Log.write("drag \(session.files.count) file(s) mode=\(mode.rawValue) kinds=\(kindList) items=\(items.count)")
         }
 
-        wheel.show(items: items, at: session.point, label: label)
+        wheel.show(items: items, at: session.point, preview: preview)
         wheel.updateHover(atScreenPoint: session.point)
 
         let hovered = wheel.hoveredItem?.id
@@ -293,15 +348,148 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Only show wedges that have a real engine behind them. This is the
+    /// truth gate: no failing conversions, no phantom video/audio tools.
+    private func validItems(mode: WheelMode, files: [URL]) -> [WheelItem] {
+        switch mode {
+        case .actions:
+            return Capabilities.actions
+
+        case .convert:
+            let kinds = files.map(FileKind.detect)
+            guard !kinds.contains(.unknown), !kinds.isEmpty else { return [] }
+            return Capabilities.convertItems(
+                kinds: kinds,
+                inputExtensions: files.map(\.pathExtension)
+            ).filter { item in
+                guard item.id.hasPrefix("convert:") else { return false }
+                let target = String(item.id.dropFirst("convert:".count))
+                return files.allSatisfy { file in
+                    guard let engine = engine(for: file, target: target) else { return false }
+                    return engine.canHandle(
+                        Job(inputs: [file], operation: .convert(to: target))
+                    )
+                }
+            }
+
+        case .tools:
+            let kinds = Array(Set(files.map(FileKind.detect)))
+            guard kinds.count == 1,
+                  let kind = kinds.first,
+                  kind == .image || kind == .pdf else { return [] }
+            return Capabilities.tools(kind, fileCount: files.count).filter {
+                supportedTool($0, kind: kind, files: files)
+            }
+        }
+    }
+
+    private func supportedTool(_ item: WheelItem, kind: FileKind, files: [URL]) -> Bool {
+        let imageTools: Set<String> = [
+            "tool:compress", "tool:crop", "tool:resize", "tool:rotate",
+            "tool:annotate", "tool:addbg", "tool:redact", "tool:removebg",
+            "tool:metadata", "tool:collage", "tool:readqr", "tool:edit"
+        ]
+        let pdfTools: Set<String> = [
+            "tool:compress", "tool:crop", "tool:annotate", "tool:redact",
+            "tool:addbg", "tool:metadata", "tool:merge", "tool:organize", "tool:split"
+        ]
+
+        switch kind {
+        case .image:
+            guard imageTools.contains(item.id) else { return false }
+            if files.count > 1 {
+                return item.id == "tool:crop" || item.id == "tool:collage"
+            }
+            // SVG is input-only in the reference and not a reliable ImageIO
+            // source here; do not offer editors until it has a decoder test.
+            return files.allSatisfy { $0.pathExtension.lowercased() != "svg" }
+        case .pdf:
+            guard pdfTools.contains(item.id) else { return false }
+            if files.count > 1 { return item.id == "tool:merge" }
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func unsupportedMessage(mode: WheelMode, kinds: [FileKind]) -> String {
+        if kinds.contains(.video) {
+            return "Audio and video conversions are the next family."
+        }
+        if kinds.contains(.slides) {
+            return "Presentation conversion is the next family."
+        }
+        if kinds.contains(.audio) {
+            return "Audio tools and conversions are the next family."
+        }
+        if kinds.contains(.document) || kinds.contains(.spreadsheet)
+            || kinds.contains(.subtitle) || kinds.contains(.archive) {
+            return "This family is on the roadmap. File actions still work with Control."
+        }
+        return "No \(mode.rawValue) wedges for this file yet."
+    }
+
+    private func wheelPreview(for files: [URL]) -> WheelPreview {
+        let key = files.map(\.path).joined(separator: "|")
+        if currentPreviewKey == key, let currentPreview { return currentPreview }
+
+        let label = files.count == 1
+            ? files[0].lastPathComponent
+            : "\(files.count) files"
+        let image: NSImage?
+        if let first = files.first {
+            switch FileKind.detect(first) {
+            case .image:
+                if let cg = ImageConvertEngine.loadPreview(at: first, maxPixel: 160) {
+                    image = NSImage(
+                        cgImage: cg,
+                        size: NSSize(width: cg.width, height: cg.height)
+                    )
+                } else {
+                    image = NSWorkspace.shared.icon(forFile: first.path)
+                }
+            case .pdf:
+                image = PDFDocument(url: first)?
+                    .page(at: 0)?
+                    .thumbnail(of: NSSize(width: 160, height: 160), for: .cropBox)
+            default:
+                image = NSWorkspace.shared.icon(forFile: first.path)
+            }
+        } else {
+            image = nil
+        }
+
+        let total = files.reduce(Int64(0)) { partial, url in
+            let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.int64Value ?? 0
+            return partial + size
+        }
+        let sizeText: String
+        if files.count > 1 {
+            sizeText = "\(files.count) items · \(ByteCountFormatter.string(fromByteCount: total, countStyle: .file))"
+        } else if total > 0 {
+            sizeText = ByteCountFormatter.string(fromByteCount: total, countStyle: .file)
+        } else {
+            sizeText = "Folder"
+        }
+
+        let preview = WheelPreview(
+            image: image,
+            fileName: label,
+            fileSize: sizeText,
+            isMultiple: files.count > 1
+        )
+        currentPreview = preview
+        currentPreviewKey = key
+        return preview
+    }
+
     private func finishDrag() {
+        defer { resetDragState() }
         Log.write("drag ended, visible=\(wheel.visible) hovered=\(wheel.hoveredItem?.id ?? "none") locked=\(wheel.isLocked)")
         if wheel.isLocked {
             // A keyboard choice already ran; keep the panel up only long
             // enough to absorb Finder's drop, then close.
             wheel.hide()
-            lastSession = nil
-            lastSignature = nil
-            lastHoveredID = nil
             return
         }
 
@@ -314,9 +502,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         wheel.hide()
+    }
+
+    private func resetDragState() {
         lastSession = nil
         lastSignature = nil
         lastHoveredID = nil
+        modeTracker.reset()
+        wheelDismissed = false
+        lastUnsupportedKey = nil
+        currentPreview = nil
+        currentPreviewKey = nil
     }
 
     // MARK: Jobs
@@ -432,7 +628,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let target = String(item.id.dropFirst("convert:".count))
-        let files = urls
+        let files = urls.filter {
+            normalisedExtension($0.pathExtension) != normalisedExtension(target)
+        }
+        guard !files.isEmpty else {
+            hud.note(
+                title: "Already \(target.uppercased())",
+                subtitle: "Every selected file is already in that format."
+            )
+            return
+        }
 
         // Multiple images onto PDF means "build one PDF", not "one PDF each".
         if target.lowercased() == "pdf",
@@ -454,69 +659,74 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             title: "Converting to \(target.uppercased())",
             subtitle: files.count == 1 ? "Preparing…" : "1 of \(files.count)"
         )
-        statusItem?.button?.title = "◉"
+        StatusIcon.setBusy(true, on: statusItem?.button)
 
-        batchTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            var outputs: [URL] = []
+        batchTask = Task { @MainActor [self] in
+            await runConversionBatch(files: files, target: target)
+        }
+    }
 
-            for (index, input) in files.enumerated() {
-                if Task.isCancelled { break }
+    @MainActor
+    private func runConversionBatch(files: [URL], target: String) async {
+        Log.write("batch task started target=\(target)")
+        var outputs: [URL] = []
 
-                let job = Job(inputs: [input], operation: .convert(to: target))
-                guard let engine = self.engine(for: input), engine.canHandle(job) else {
-                    self.hud.fail("Can’t convert \(input.lastPathComponent) to \(target.uppercased())")
-                    self.statusItem?.button?.title = "◎"
-                    return
-                }
+        for (index, input) in files.enumerated() {
+            if Task.isCancelled { break }
 
-                if files.count > 1 {
-                    self.hud.update(subtitle: "\(index + 1) of \(files.count)")
-                }
-
-                Log.write("job start \(input.path) → \(target)")
-                let task = Task.detached(priority: .userInitiated) {
-                    try await engine.run(job) { _ in }
-                }
-                self.engineTask = task
-
-                do {
-                    let result = try await task.value
-                    outputs.append(contentsOf: result)
-                    self.hud.update(
-                        subtitle: files.count == 1
-                            ? "Saving…"
-                            : "\(index + 1) of \(files.count) saved"
-                    )
-                } catch is CancellationError {
-                    self.hud.hide()
-                    self.statusItem?.button?.title = "◎"
-                    Log.write("cancelled")
-                    return
-                } catch {
-                    self.hud.fail(error.friendlyMessage)
-                    self.statusItem?.button?.title = "◎"
-                    NSSound.beep()
-                    Log.write("job failed \(input.path): \(error.localizedDescription)")
-                    return
-                }
-            }
-
-            if Task.isCancelled {
-                self.hud.hide()
-                self.statusItem?.button?.title = "◎"
+            let job = Job(inputs: [input], operation: .convert(to: target))
+            guard let engine = engine(for: input, target: target), engine.canHandle(job) else {
+                hud.fail("Can’t convert \(input.lastPathComponent) to \(target.uppercased())")
+                StatusIcon.setBusy(false, on: statusItem?.button)
                 return
             }
 
-            self.finished(outputs)
-            self.statusItem?.button?.title = "◎"
-            self.hud.succeed(
-                title: "Converted to \(target.uppercased())",
-                subtitle: "\(files.count) of \(files.count) saved"
-            )
-            Sound.completion()
-            Log.write("batch done \(outputs.map(\.path))")
+            if files.count > 1 {
+                hud.update(subtitle: "\(index + 1) of \(files.count)")
+            }
+
+            Log.write("job start \(input.path) → \(target)")
+            let task = Task.detached(priority: .userInitiated) {
+                try await engine.run(job) { _ in }
+            }
+            engineTask = task
+
+            do {
+                let result = try await task.value
+                outputs.append(contentsOf: result)
+                hud.update(
+                    subtitle: files.count == 1
+                        ? "Saving…"
+                        : "\(index + 1) of \(files.count) saved"
+                )
+            } catch is CancellationError {
+                hud.hide()
+                StatusIcon.setBusy(false, on: statusItem?.button)
+                Log.write("cancelled")
+                return
+            } catch {
+                hud.fail(error.friendlyMessage)
+                StatusIcon.setBusy(false, on: statusItem?.button)
+                NSSound.beep()
+                Log.write("job failed \(input.path): \(error.localizedDescription)")
+                return
+            }
         }
+
+        if Task.isCancelled {
+            hud.hide()
+            StatusIcon.setBusy(false, on: statusItem?.button)
+            return
+        }
+
+        finished(outputs)
+        StatusIcon.setBusy(false, on: statusItem?.button)
+        hud.succeed(
+            title: "Converted to \(target.uppercased())",
+            subtitle: "\(files.count) of \(files.count) saved"
+        )
+        Sound.completion()
+        Log.write("batch done \(outputs.map(\.path))")
     }
 
     // MARK: File actions
@@ -538,8 +748,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 subtitle: urls.count == 1 ? urls[0].lastPathComponent : "\(urls.count) items"
             )
 
-        case "action:copy", "action:move":
-            chooseDestination(for: urls, moving: item.id == "action:move")
+        case "action:copy":
+            copyToPasteboard(urls)
+
+        case "action:move":
+            chooseDestination(for: urls)
 
         case "action:copypath":
             NSPasteboard.general.clearContents()
@@ -560,37 +773,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func chooseDestination(for urls: [URL], moving: Bool) {
+    private func copyToPasteboard(_ urls: [URL]) {
+        FileActions.copyToPasteboard(urls)
+        hud.succeed(
+            title: "Copied",
+            subtitle: urls.count == 1 ? urls[0].lastPathComponent : "\(urls.count) files on the clipboard"
+        )
+        Sound.completion()
+        Log.write("copied \(urls.count) file(s) to clipboard")
+    }
+
+    private func chooseDestination(for urls: [URL]) {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = moving ? "Move Here" : "Copy Here"
-        panel.message = moving
-            ? "Choose a folder to move the selection into."
-            : "Choose a folder to copy the selection into."
+        panel.prompt = "Move Here"
+        panel.message = "Choose a folder to move the selection into."
 
         guard panel.runModal() == .OK, let destination = panel.url else { return }
 
         let count = urls.count
         hud.onCancel = { [weak self] in self?.cropTask?.cancel() }
-        hud.show(title: moving ? "Moving" : "Copying", subtitle: "\(count) items")
+        hud.show(title: "Moving", subtitle: "\(count) items")
 
         cropTask = Task { @MainActor [weak self] in
             do {
                 let outputs = try await Task.detached(priority: .userInitiated) {
-                    try FileActions.transfer(urls, to: destination, moving: moving)
+                    try FileActions.transfer(urls, to: destination, moving: true)
                 }.value
                 self?.hud.succeed(
-                    title: moving ? "Moved" : "Copied",
+                    title: "Moved",
                     subtitle: outputs.isEmpty ? "Already in that folder" : "\(outputs.count) items"
                 )
                 Sound.completion()
-                Log.write("\(moving ? "move" : "copy") done \(outputs.map(\.path))")
+                Log.write("move done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
                 NSSound.beep()
-                Log.write("\(moving ? "move" : "copy") failed: \(error.localizedDescription)")
+                Log.write("move failed: \(error.localizedDescription)")
             }
         }
     }
@@ -605,9 +826,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ? first
             : first.deletingLastPathComponent()
 
-        guard let terminal = NSWorkspace.shared.urlForApplication(
-            withBundleIdentifier: "com.apple.Terminal"
-        ) else {
+        guard let terminal = TerminalApps.selectedURL else {
             NSWorkspace.shared.open(folder)
             return
         }
@@ -618,7 +837,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { _, error in
             if let error { Log.write("terminal: \(error.localizedDescription)") }
         }
-        Log.write("terminal at \(folder.path)")
+        Log.write("terminal at \(folder.path) via \(TerminalApps.selectedBundleID)")
     }
 
     @objc private func toggleShelf() {
@@ -628,6 +847,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func finished(_ outputs: [URL]) {
         lastOutputs = outputs
         Reveal.ifEnabled(outputs)
+    }
+
+    @objc private func showAbout() {
+        if let aboutWindow {
+            aboutWindow.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        let controller = AboutWindowController()
+        aboutWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc private func checkForUpdates() {
+        guard let url = URL(string: "https://github.com/j4yop/DragConvert/releases") else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func showSettings() {
@@ -642,11 +878,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    private func engine(for input: URL) -> Engine? {
+    private func normalisedExtension(_ ext: String) -> String {
+        switch ext.lowercased() {
+        case "jpeg": return "jpg"
+        case "tif": return "tiff"
+        case "heif": return "heic"
+        default: return ext.lowercased()
+        }
+    }
+
+    private func engine(for input: URL, target: String? = nil) -> Engine? {
         switch FileKind.detect(input) {
-        case .pdf: return PDFToImageEngine()
-        case .image: return ImageConvertEngine()
-        default: return nil
+        case .pdf:
+            if let target = target?.lowercased(), target == "txt" || target == "md" {
+                return PDFTextEngine()
+            }
+            return PDFToImageEngine()
+        case .image:
+            return ImageConvertEngine()
+        default:
+            return nil
         }
     }
 

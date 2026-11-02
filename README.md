@@ -23,7 +23,10 @@ make log     # drag / hover / drop / job — with full output paths
 ## What works
 
 - Menu-bar app, sandboxed, ad-hoc signed
-- Wheel appears on ⇧ / ⌥⌘ / ⌃ and stays anchored
+- Wheel appears on ⇧ / ⇧⌥ / ⌃, stays open after you release the key, and stays anchored
+- **Sticky wheel:** tap the key once, release, choose at leisure; Escape cancels
+- **Centre preview:** dragged-file thumbnail, filename and size pill
+- **Mixed selections:** convert the formats every file shares; files already in the target are skipped
 - Keyboard: 1–9 picks a wedge, arrows cycle, Return applies, Escape cancels
 - Hover from the polled pointer; release fallback if the drag destination doesn't fire
 - Progress HUD with running / success / failure states and cancel
@@ -46,14 +49,25 @@ make log     # drag / hover / drop / job — with full output paths
 - **Remove BG** via Vision’s on-device foreground mask → transparent PNG
 - **Read QR** and copy the decoded value or open its link
 - **Edit photos** with brightness, contrast, saturation and warmth + live preview
+- **PDF → TXT/Markdown** with selectable text and local Vision OCR for scanned pages
+- **AVIF export** (plus JPG/PNG/HEIC/TIFF/BMP/PDF)
+- **App icon, template menu-bar wheel, About/privacy/licences, update link**
 - **5-step capsule onboarding** with wheel demo, folder access and launch at login
-- **File actions**: AirDrop, Float shelf, Copy, Move, Copy Path, Terminal
-- **Settings**: wheel shortcuts, sound, reveal, conflict policy, launch at login
+- **File actions**: AirDrop, Float shelf, Copy (clipboard), Move, Copy Path, Terminal (Terminal/iTerm2 picker)
+- **Settings**: wheel shortcuts, sound, hover haptics, reveal, terminal app, conflict policy, launch at login
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
-- Atomic writes, collision naming, 46 unit tests
+- Atomic writes, collision naming, 56 unit tests
 
 Source: <https://github.com/j4yop/DragConvert> · Licence: [MIT](LICENSE)
+
+## Screens
+
+| Conversion wheel | Settings |
+|---|---|
+| ![Conversion wheel](docs/screenshots/wheel.png) | ![Settings](docs/screenshots/settings.png) |
+
+![About DragConvert](docs/screenshots/about.png)
 
 ## Read in this order
 
@@ -76,4 +90,4 @@ make open      # needs: brew install xcodegen
 
 ## Next
 
-A “truthful wheel” release: hide formats with no engine, make the wheel sticky, fix the ⇧⌥ shortcut and Copy action, add the centre preview, then app icon/packaging. After that: WebP/AVIF, PDF OCR/PDF-A, and optional FFmpeg. The full audit is in [`docs/TANGERINE-GAP-REPORT.md`](docs/TANGERINE-GAP-REPORT.md).
+The P0 interaction release is built: truthful wheel, sticky selection, ⇧⌥, Copy-to-clipboard, mixed selections, centre preview, AVIF, PDF text/OCR, app icon and packaging. Next are WebP/SVG encoding, PDF/A-2b and PDF→Office, the metadata editor and deeper photo/annotate/redact controls, then optional FFmpeg for audio/video. The full audit is in [`docs/TANGERINE-GAP-REPORT.md`](docs/TANGERINE-GAP-REPORT.md).

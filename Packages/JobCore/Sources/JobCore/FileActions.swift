@@ -1,8 +1,19 @@
+import AppKit
 import Foundation
 
 public enum FileActions {
     /// Copies or moves a selection into a destination folder, never overwriting.
     /// Files already in the destination are skipped (a no-op, not a rename).
+    /// Tangerine's Copy action: file URLs on the general pasteboard so
+    /// Finder can paste them. It is not a copy-to-folder operation.
+    public static func copyToPasteboard(
+        _ urls: [URL],
+        pasteboard: NSPasteboard = .general
+    ) {
+        pasteboard.clearContents()
+        pasteboard.writeObjects(urls as [NSURL])
+    }
+
     public static func transfer(
         _ urls: [URL],
         to destination: URL,

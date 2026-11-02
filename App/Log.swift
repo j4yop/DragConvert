@@ -12,10 +12,15 @@ enum Log {
     }()
 
     private static let formatter = ISO8601DateFormatter()
+    private static let lock = NSLock()
 
     static func write(_ message: String) {
+        lock.lock()
         let line = "\(formatter.string(from: Date())) \(message)\n"
-        guard let data = line.data(using: .utf8) else { return }
+        guard let data = line.data(using: .utf8) else {
+            lock.unlock()
+            return
+        }
         if let handle = try? FileHandle(forWritingTo: url) {
             handle.seekToEndOfFile()
             handle.write(data)
@@ -23,6 +28,7 @@ enum Log {
         } else {
             try? data.write(to: url)
         }
+        lock.unlock()
         NSLog("[dragconvert] \(message)")
     }
 }

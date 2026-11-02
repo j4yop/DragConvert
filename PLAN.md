@@ -11,7 +11,7 @@ Reference: **Tangerine: File Converter** (LEAP STUDIO, macOS 13+, $29.99, v2.0.2
 1. **Native Swift 6 + SwiftUI + AppKit.** A webview cannot be an `NSDraggingDestination` mid-drag.
 2. **No Accessibility permission.** Poll the drag pasteboard, button state and modifier flags; show a non-activating panel.
 3. **Anchor the wheel once.** It must not follow the pointer — that was the first real bug.
-4. **Three wheels, one engine.** Convert (⇧), Tools (⌥⌘), Actions (⌃).
+4. **Three wheels, one engine.** Convert (⇧), Tools (⇧⌥), Actions (⌃).
 5. **Everything local.** No network entitlement.
 6. **Write beside the original**, atomically, never overwrite.
 7. **Sandbox from day one** + home-folder security-scoped bookmark.
@@ -24,7 +24,7 @@ Reference: **Tangerine: File Converter** (LEAP STUDIO, macOS 13+, $29.99, v2.0.2
 ## 1. What the product is
 
 ```
-drag file → hold ⇧ / ⌥⌘ / ⌃ → wheel appears (anchored)
+drag file → hold ⇧ / ⇧⌥ / ⌃ → wheel appears (anchored)
           → move out to a wedge → release
           → progress toast → new file beside source
 ```
@@ -34,7 +34,7 @@ Three wheels:
 | Key | Wheel | Example (PDF) |
 |---|---|---|
 | ⇧ | Convert | JPG · PNG · TXT · DOCX · EPUB · PPTX · XLSX · MD |
-| ⌥⌘ | Tools | Compress · Crop · Annotate · Redact · Add BG · Metadata · Edit |
+| ⇧⌥ | Tools | Compress · Crop · Annotate · Redact · Add BG · Metadata · Edit |
 | ⌃ | Actions | AirDrop · Float · Copy · Move · Copy Path · Terminal |
 
 The wheel shows only operations valid for the dragged file, and never the file’s own format.

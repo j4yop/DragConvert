@@ -5,16 +5,16 @@ import AppKit
 // MARK: - File kinds
 
 public enum FileKind: String, CaseIterable, Sendable {
-    case image, pdf, document, spreadsheet, audio, video, archive, subtitle, unknown
+    case image, pdf, document, slides, spreadsheet, audio, video, archive, subtitle, unknown
 
     /// Extension table first: UTType conformance is ambiguous for CSV (conforms
     /// to `.text` before `.spreadsheet`), DOCX (conforms to `.zip`), etc.
     public static func detect(_ url: URL) -> FileKind {
         switch url.pathExtension.lowercased() {
         case "pdf": return .pdf
-        case "jpg", "jpeg", "png", "heic", "heif", "webp", "tiff", "tif", "bmp", "avif", "gif", "svg":
+        case "jpg", "jpeg", "png", "heic", "heif", "webp", "tiff", "tif", "bmp", "avif", "svg":
             return .image
-        case "mp4", "mov", "m4v", "mkv", "webm", "avi", "wmv":
+        case "gif", "mp4", "mov", "m4v", "mkv", "webm", "avi", "wmv":
             return .video
         case "mp3", "m4a", "wav", "flac", "ogg", "opus", "aiff", "aif", "wma":
             return .audio
@@ -24,7 +24,9 @@ public enum FileKind: String, CaseIterable, Sendable {
             return .archive
         case "srt", "vtt":
             return .subtitle
-        case "docx", "doc", "pages", "rtf", "rtfd", "txt", "md", "markdown", "epub", "pptx", "ppt", "html", "htm":
+        case "pptx", "ppt", "odp":
+            return .slides
+        case "docx", "doc", "pages", "rtf", "rtfd", "textclipping", "txt", "md", "markdown", "epub", "html", "htm":
             return .document
         default:
             break
@@ -59,7 +61,7 @@ public enum WheelMode: String, Sendable, CaseIterable {
 }
 
 public enum WheelShortcut: String, CaseIterable, Sendable {
-    case shift, command, option, optionCommand, control, controlOption, shiftCommand, shiftControl
+    case shift, command, option, optionCommand, optionShift, control, controlOption, shiftCommand, shiftControl
 
     public var flags: NSEvent.ModifierFlags {
         switch self {
@@ -67,6 +69,7 @@ public enum WheelShortcut: String, CaseIterable, Sendable {
         case .command: return .command
         case .option: return .option
         case .optionCommand: return [.option, .command]
+        case .optionShift: return [.option, .shift]
         case .control: return .control
         case .controlOption: return [.control, .option]
         case .shiftCommand: return [.shift, .command]
@@ -80,11 +83,32 @@ public enum WheelShortcut: String, CaseIterable, Sendable {
         case .command: return "⌘ Command"
         case .option: return "⌥ Option"
         case .optionCommand: return "⌥⌘ Option + Command"
+        case .optionShift: return "⇧⌥ Shift + Option"
         case .control: return "⌃ Control"
         case .controlOption: return "⌃⌥ Control + Option"
         case .shiftCommand: return "⇧⌘ Shift + Command"
         case .shiftControl: return "⇧⌃ Shift + Control"
         }
+    }
+}
+
+/// Remembers the last wheel chosen during one drag. Releasing the modifier
+/// does not clear it; starting a new drag resets it.
+public struct WheelModeTracker {
+    public private(set) var mode: WheelMode?
+
+    public init() {}
+
+    @discardableResult
+    public mutating func update(modifiers: NSEvent.ModifierFlags) -> WheelMode? {
+        if let next = WheelMode.from(modifiers) {
+            mode = next
+        }
+        return mode
+    }
+
+    public mutating func reset() {
+        mode = nil
     }
 }
 
@@ -103,7 +127,7 @@ public enum WheelShortcuts {
     }
 
     public static var tools: WheelShortcut {
-        get { read(toolsKey, fallback: .optionCommand) }
+        get { read(toolsKey, fallback: .optionShift) }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: toolsKey) }
     }
 
@@ -157,12 +181,12 @@ public enum Capabilities {
     ) -> [WheelItem] {
         switch mode {
         case .convert:
-            let own = inputExtension?.lowercased()
-            return convertTargets(kind)
-                .filter { $0 != own }
-                .map { WheelItem(id: "convert:\($0)", title: $0.uppercased(), symbol: "") }
+            return convertItems(
+                kinds: [kind],
+                inputExtensions: inputExtension.map { [$0] } ?? []
+            )
         case .tools:
-            return tools(kind)
+            return tools(kind, fileCount: 1)
         case .actions:
             return actions
         }
@@ -173,11 +197,13 @@ public enum Capabilities {
         case .image:
             return ["jpg", "png", "webp", "heic", "tiff", "avif", "bmp", "pdf"]
         case .pdf:
-            return ["docx", "pages", "pptx", "xlsx", "jpg", "png", "epub", "txt", "md"]
+            return ["docx", "pages", "pptx", "xlsx", "jpg", "png", "tiff", "epub", "txt", "md"]
         case .document:
-            return ["pdf", "docx", "pages", "md", "txt", "epub", "html"]
+            return ["pdf", "docx", "pages", "md", "txt", "epub", "html", "jpg", "png"]
+        case .slides:
+            return ["pdf", "jpg", "png"]
         case .spreadsheet:
-            return ["csv", "tsv", "xlsx", "pdf"]
+            return ["csv", "tsv", "xlsx", "ods", "pdf"]
         case .audio:
             return ["mp3", "m4a", "wav", "flac", "ogg", "opus", "aiff", "wma"]
         case .video:
@@ -244,8 +270,61 @@ public enum Capabilities {
                 ("Bleep", "speaker.slash"),
                 ("Visualizer", "waveform.path.ecg")
             ])
-        case .document, .spreadsheet, .subtitle, .archive, .unknown:
-            return make([("Compress", "arrow.down.right.and.arrow.up.left")])
+        case .document, .slides, .spreadsheet, .subtitle, .archive, .unknown:
+            return []
+        }
+    }
+
+    /// Tools that genuinely work on a multi-file selection today.
+    public static func tools(_ kind: FileKind, fileCount: Int) -> [WheelItem] {
+        let all = tools(kind)
+        guard fileCount > 1 else {
+            // Merge and collage need a selection. A single file should not
+            // see a wedge that cannot do anything useful.
+            return all.filter { $0.id != "tool:merge" && $0.id != "tool:collage" }
+        }
+        let allowed: Set<String>
+        switch kind {
+        case .image:
+            allowed = ["tool:crop", "tool:collage"]
+        case .pdf:
+            allowed = ["tool:merge"]
+        default:
+            allowed = []
+        }
+        return all.filter { allowed.contains($0.id) }
+    }
+
+    /// Targets shared by every file in a selection, in the first kind's
+    /// native order, excluding a format only when every input is already it.
+    public static func convertItems(
+        kinds: [FileKind],
+        inputExtensions: [String]
+    ) -> [WheelItem] {
+        guard kinds.first != nil else { return [] }
+        let lists = kinds.map(convertTargets)
+        guard var intersection = lists.first.map(Set.init) else { return [] }
+        for list in lists.dropFirst() {
+            intersection.formIntersection(Set(list))
+        }
+
+        let own = Set(inputExtensions.map(normalisedExtension))
+        let ordered = lists[0].filter { target in
+            guard intersection.contains(target) else { return false }
+            return !own.allSatisfy { $0 == target }
+        }
+
+        return Array(ordered.prefix(maxWedges)).map { target in
+            WheelItem(id: "convert:\(target)", title: target.uppercased(), symbol: "")
+        }
+    }
+
+    private static func normalisedExtension(_ ext: String) -> String {
+        switch ext.lowercased() {
+        case "jpeg": return "jpg"
+        case "tif": return "tiff"
+        case "heif": return "heic"
+        default: return ext.lowercased()
         }
     }
 

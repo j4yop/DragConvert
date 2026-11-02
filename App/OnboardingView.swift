@@ -47,10 +47,10 @@ struct OnboardingView: View {
         ),
         OnboardingPage(
             title: "File Tools",
-            body: "Hold Option and Command to get the tools that make sense for that exact file: compress, crop, rotate, redact and more.",
+            body: "Hold Shift and Option to get the tools that make sense for that exact file: compress, crop, rotate, redact and more.",
             steps: [
                 OnboardingStep(text: "Drag files", keys: []),
-                OnboardingStep(text: "Tap", keys: ["⌥", "⌘"]),
+                OnboardingStep(text: "Tap", keys: ["⇧", "⌥"]),
                 OnboardingStep(text: "Pick a tool", keys: [])
             ],
             labels: ["COMPRESS", "CROP", "RESIZE", "ROTATE", "ANNOTATE", "REDACT", "META"],

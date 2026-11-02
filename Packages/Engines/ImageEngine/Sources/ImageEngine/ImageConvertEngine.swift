@@ -12,6 +12,11 @@ public struct ImageConvertEngine: Engine {
 
     public func canHandle(_ job: Job) -> Bool {
         guard case .convert(let ext) = job.operation else { return false }
+        // SVG needs a real rasteriser (resvg). Until that ships, do not
+        // advertise an SVG conversion that ImageIO cannot perform.
+        if job.inputs.contains(where: { $0.pathExtension.lowercased() == "svg" }) {
+            return false
+        }
         return Self.uti(forExtension: ext) != nil
     }
 
@@ -132,6 +137,7 @@ public struct ImageConvertEngine: Engine {
         case "heic", "heif": return .heic
         case "tif", "tiff": return .tiff
         case "bmp": return .bmp
+        case "avif": return UTType(filenameExtension: "avif")
         case "pdf": return .pdf
         default: return nil
         }

@@ -4,10 +4,12 @@ import CapabilityGraph
 
 struct SettingsView: View {
     @AppStorage("wheelConvertShortcut") private var convert = WheelShortcut.shift.rawValue
-    @AppStorage("wheelToolsShortcut") private var tools = WheelShortcut.optionCommand.rawValue
+    @AppStorage("wheelToolsShortcut") private var tools = WheelShortcut.optionShift.rawValue
     @AppStorage("wheelActionsShortcut") private var actions = WheelShortcut.control.rawValue
     @AppStorage("soundEnabled") private var sound = true
-    @AppStorage("revealOnFinish") private var reveal = false
+    @AppStorage("hapticsEnabled") private var haptics = true
+    @AppStorage("revealOnFinish") private var reveal = true
+    @AppStorage("terminalBundleID") private var terminal = TerminalApps.selectedBundleID
     @AppStorage("conflictPolicy") private var conflict = ConflictPolicy.rename.rawValue
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
 
@@ -34,7 +36,20 @@ struct SettingsView: View {
 
             Section("Feedback") {
                 Toggle("Play a sound when a file is saved", isOn: $sound)
+                Toggle("Hover haptics", isOn: $haptics)
                 Toggle("Reveal the result in Finder", isOn: $reveal)
+            }
+
+            Section("Actions") {
+                Picker("Open Terminal in", selection: $terminal) {
+                    ForEach(TerminalApps.installed) { app in
+                        Text(app.name).tag(app.id)
+                    }
+                }
+
+                Text("The Terminal action uses this app. Copy puts the selected file URLs on the clipboard.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
             }
 
             Section("Files") {
@@ -58,7 +73,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 560, height: 560)
+        .frame(width: 560, height: 700)
         .onAppear {
             DestinationPolicy.policy =
                 ConflictPolicy(rawValue: conflict) ?? .rename
@@ -82,7 +97,7 @@ struct SettingsView: View {
 final class SettingsWindowController: NSWindowController {
     init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 560),
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 700),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
