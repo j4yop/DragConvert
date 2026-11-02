@@ -8,9 +8,9 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 |---|---|---|
 | Conversion paths | 9 | ~270 |
 | Tools | 17 (crop img+PDF, resize, rotate, compress img+PDF, metadata, merge, split, organize, annotate img+PDF, redact img+PDF, add BG img+PDF, collage, remove BG, read QR, edit photo) | 26 |
-| File actions | 0 | 6 |
+| File actions | 6 | 6 |
 | Families | 3 (image, PDF, partial docs) | 9 |
-| Unit tests | 8 | 120+ |
+| Unit tests | 46 | 120+ |
 
 ---
 
@@ -57,9 +57,10 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **PDF-9 · Add background to PDF** — frame every page on a colour or image canvas with padding and shadow, export a new PDF; engine test
 - [x] **IMG-15 · Photo editor** — brightness, contrast, saturation and warmth sliders, live preview, exported copy; 2 engine tests
 - [x] **ONB-1 · 5-step onboarding** — capsule window, animated wheel highlight, Shift/⌥⌘/⌃ keycaps, folder access, launch at login, Done; page dots
-- [x] **ONB-2 · Folder access + finish setup** — permission button, toggle, trial copy
+- [x] **ONB-2 · Folder access + finish setup** — permission button, toggle, open-source copy
 - [x] **ACT-1 · Actions wheel** — AirDrop, Float shelf (drag-out rows), Copy, Move, Copy Path, Terminal; transfer engine test
 - [x] **APP-1 · Settings** — wheel shortcut pickers, sound, reveal in Finder, conflict policy (rename/replace), launch at login; persisted and applied live
+- [x] **OPEN-1 · Free and open source** — removed the StoreKit trial/paywall; MIT licence; onboarding and Settings say free, no limits
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -81,11 +82,11 @@ does not reliably receive `performDragOperation`.
 - [ ] **IMG-1b · Batch crop** — 0.5d
   Acceptance: 5 images → crop panel for the first, same rect applied to all 5, outputs “<name> Cropped.jpg”.
 
-- [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
+- [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d
   Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
-- [ ] **LIC-1 · Trial + one-time unlock** — 2d ← next
-  Acceptance: 20 free files, one-time StoreKit 2 purchase, Restore Purchases, status shown in Settings and onboarding.
+- [ ] **APP-4 · App icon + packaging** — 1.5d ← next
+  Acceptance: app icon and menu-bar template icon, version bump, privacy policy, dependency licences, signed bundle.
 
 ---
 
@@ -168,7 +169,6 @@ does not reliably receive `performDragOperation`.
 
 ## P5 — polish + launch (weeks 24–26)
 
-- [ ] **LIC-1** StoreKit 2 + trial counter — 2d
 - [ ] **QA-3** 40-case matrix across macOS versions — 4d
 - [ ] **QA-4** Accessibility pass — 2d
 - [ ] **QA-5** 500-conversion soak — 2d

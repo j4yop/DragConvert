@@ -508,7 +508,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            self.lastOutputs = outputs
+            self.finished(outputs)
             self.statusItem?.button?.title = "◎"
             self.hud.succeed(
                 title: "Converted to \(target.uppercased())",

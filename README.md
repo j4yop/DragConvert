@@ -2,6 +2,9 @@
 
 A macOS utility that converts files mid-drag, from a radial wheel at the pointer.
 
+**Free and open source (MIT).** No trial, no purchase, no account, no telemetry.
+Every conversion runs locally on your Mac.
+
 **Status: the core loop works.** A sandboxed app sees a Finder drag, shows the wheel, and writes the converted file beside the original.
 
 ## Run
@@ -50,7 +53,7 @@ make log     # drag / hover / drop / job — with full output paths
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
 - Atomic writes, collision naming, 46 unit tests
 
-Private repo: <https://github.com/j4yop/DragConvert>
+Source: <https://github.com/j4yop/DragConvert> · Licence: [MIT](LICENSE)
 
 ## Read in this order
 
@@ -73,4 +76,4 @@ make open      # needs: brew install xcodegen
 
 ## Next
 
-Progress HUD, batch selections, error surfacing, motion + keyboard, performance. Then crop.
+App icon and packaging, then audio/video with the free LGPL build of FFmpeg.

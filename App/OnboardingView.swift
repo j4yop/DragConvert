@@ -219,9 +219,13 @@ struct OnboardingView: View {
                     LaunchAtLogin.set(value)
                 }
 
-            Text("Free for your first 20 files · one-time unlock after.")
+            Label("Free and open source · no account, no limits", systemImage: "heart.fill")
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundStyle(.white.opacity(0.78))
+
+            Text("MIT licensed · everything runs on this Mac")
                 .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.white.opacity(0.55))
         }
     }
 }

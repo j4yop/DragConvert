@@ -98,7 +98,7 @@ Budgets: wheel ≤ 80 ms, idle CPU ≈ 0, 10 MB image ≤ 400 ms, PDF page ≤ 2
 | → Thu | **WHEEL-1b** appear motion + **S3** performance | “10 wedges at 120 fps, no leaks.” |
 | → Fri | **DRAG-2** mixed selection + demo | “A mixed selection tells me what to do.” |
 
-**Image tools and the first PDF tools are done:** crop, resize, rotate, compress, metadata, PDF merge and PDF split. Every image/PDF wedge, onboarding, the Actions wheel and Settings are done. Next: trial/licence, app icon, and then audio/video.
+**Image tools and the first PDF tools are done:** crop, resize, rotate, compress, metadata, PDF merge and PDF split. Every image/PDF wedge, onboarding, the Actions wheel and Settings are done. DragConvert is free and MIT-licensed. Next: app icon + packaging, then audio/video.
 
 **Blocked decision:** keyboard navigation (**WHEEL-2**) needs either Input Monitoring (listen-only event tap) or activating the panel (loses Finder focus). Decide in week 3; do not let it block the image tools.
 
@@ -155,7 +155,7 @@ I return the diff, test output, a manual QA checklist and any plan updates.
 | D4 | FFmpeg LGPL-only for A/V | Yes |
 | D5 | macOS 13+ | Yes |
 | D6 | Core launch ~week 15, parity ~week 26 | Yes |
-| D7 | $29.99 one-time, 20-file trial | Yes |
+| D7 | MIT open source; no paywall, trial, or account | Yes |
 | D8 | Ad-hoc signing now, $99 at distribution | No |
 
 ---

@@ -17,7 +17,7 @@ Reference: **Tangerine: File Converter** (LEAP STUDIO, macOS 13+, $29.99, v2.0.2
 7. **Sandbox from day one** + home-folder security-scoped bookmark.
 8. **Parity target:** 9 families, ~270 paths, 26 tools, 6 actions. See `PARITY.md`.
 9. **Two tracks:** core launch ~week 15, full parity ~week 26 solo.
-10. **$29.99 one-time**, 20-file trial.
+10. **Free and open source (MIT).** No trial, no purchase, no account.
 
 ---
 
@@ -149,7 +149,7 @@ PDF/DOCX/PAGES/EPUB/RTF/HTML/PPTX → importer → DocModel (pages → blocks) �
 | **DocModel** | pages → blocks | `Document`, `Page`, `Block` |
 | **Importers/Exporters** | DOCX, PAGES, EPUB, RTF, HTML, PPTX, XLSX, MD, PDF | `import/export` |
 | **RenderService** | DocModel → PDF/PNG, 300 DPI raster | `render` |
-| **Platform** | bookmarks, login item, licence, logs | services |
+| **Platform** | bookmarks, login item, logs | services |
 | **Shell** | menu bar, onboarding, settings, history | SwiftUI scenes |
 
 Rule: no engine imports another; no UI imports an engine; a new format is one manifest row + one engine method + one fixture.
@@ -196,11 +196,11 @@ No network entitlement. No file names in telemetry. Temp files `0600`, removed o
 | Sheets | OOXML/ODS/BIFF + libxlsxwriter |
 | A/V | AVFoundation + VideoToolbox + FFmpeg (LGPL) |
 | Archives | libarchive |
-| Licensing | StoreKit 2 + Keychain trial |
+| Licensing | MIT (app); no StoreKit, no purchase flow |
 | Updates | App Store / Sparkle 2 |
 | CI | GitHub Actions macOS, `swift test` |
 
-Licences: MIT/BSD for libwebp, libavif, resvg, libarchive, libxlsxwriter, ZIPFoundation; LGPL-2.1 for FFmpeg; never AGPL.
+DragConvert itself is MIT. Dependencies: MIT/BSD for libwebp, libavif, resvg, libarchive, libxlsxwriter, ZIPFoundation; LGPL-2.1 for FFmpeg; never AGPL.
 
 ---
 
@@ -214,7 +214,7 @@ com.apple.security.files.bookmarks.app-scope      = true
 
 No network, no accessibility, no Apple Events, no full disk.
 
-Onboarding: converter/tools/actions explainer → folder access → launch at login / trial status.
+Onboarding: converter/tools/actions explainer → folder access → launch at login → finish.
 
 ---
 
@@ -278,7 +278,7 @@ scripts/              bundle + fixtures
 | 6 | 120 Hz glass jank | Static gradient fallback |
 | 7 | Filenames with emoji/RTL | Middle truncation + corpus |
 | 8 | iCloud materialisation stalls | `startDownloadingUbiquitousItem` + timeout |
-| 9 | Trial bypass | Keychain + receipt |
+| 9 | Paywall creep | MIT licence + no StoreKit dependency |
 | 10 | Project loss | Git + remote backup after every session |
 
 **Red team:** native is required (drag), LibreOffice is not viable (700 MB), cloud/AI breaks the privacy promise, 60 correct paths beat 275 half-tested ones.

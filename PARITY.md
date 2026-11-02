@@ -14,7 +14,7 @@ Legend: **✅** shipped · **➕** planned · **⚠️** fidelity caveat · **�
 | File tools | 26 (22 generic + 4 PDF variants) | 26 advertised + 8 extras |
 | File actions | 6 | 6 |
 | File families | 9 | 9 |
-| Price | $29.99 one-time, 20-file trial | match |
+| Price | $29.99 one-time, 20-file trial | Free and open source (MIT), no limits |
 
 ---
 
@@ -167,7 +167,7 @@ Extras we ship beyond the advertised 26: resize, rotate, remove background, read
 | Copy Path | pasteboard | P2 |
 | Terminal | `NSWorkspace` + default terminal | P2 |
 
-Actions work with folders and mixed selections and don’t consume the trial allowance.
+Actions work with folders and mixed selections and never create or replace a file.
 
 ---
 
