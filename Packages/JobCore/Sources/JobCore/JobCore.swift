@@ -494,6 +494,13 @@ public enum DestinationPolicy {
 /// Write to a hidden temp file in the destination folder, then rename.
 public func writeAtomically(to destination: URL, _ body: (URL) throws -> Void) throws {
     let dir = destination.deletingLastPathComponent()
+
+    // Fail with the friendly permission error before an engine turns this
+    // into an opaque "could not create a context / open a tmp file" message.
+    guard FileManager.default.isWritableFile(atPath: dir.path) else {
+        throw CocoaError(.fileWriteNoPermission)
+    }
+
     let tmp = dir.appendingPathComponent(".\(UUID().uuidString).tmp")
     do {
         try body(tmp)

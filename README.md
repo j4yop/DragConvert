@@ -61,7 +61,7 @@ make log     # drag / hover / drop / job — with full output paths
 - **Settings**: wheel shortcuts, sound, hover haptics, reveal, terminal app, conflict policy, launch at login
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
-- Atomic writes, collision naming, 56 unit tests
+- Atomic writes, collision naming, 57 unit tests
 
 Source: <https://github.com/j4yop/DragConvert> · Licence: [MIT](LICENSE)
 

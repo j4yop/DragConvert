@@ -69,6 +69,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "soundEnabled": true,
             "hapticsEnabled": true
         ])
+
+        // Re-activate the home-folder security-scoped bookmark at launch.
+        // Dragging a file grants read access to that file, but writing the
+        // result beside it needs the folder bookmark. Without this, every
+        // conversion reads the input and then fails to create its temp file.
+        _ = FolderAccess.shared.ensureAccess(promptIfNeeded: false)
         setUpStatusItem()
 
         wheel.onDrop = { [weak self] item, urls in
@@ -241,6 +247,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 Log.write("wheel demo key=\(self.wheel.isKeyWindow) visible=\(self.wheel.visible) appActive=\(NSApp.isActive) front=\(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "nil")")
             }
+        }
+
+        if let demoIndex = CommandLine.arguments.firstIndex(of: "--convert-demo"),
+           demoIndex + 2 < CommandLine.arguments.count {
+            let path = CommandLine.arguments[demoIndex + 1]
+            let target = CommandLine.arguments[demoIndex + 2]
+            perform(
+                item: WheelItem(
+                    id: "convert:\(target)",
+                    title: target.uppercased(),
+                    symbol: ""
+                ),
+                on: [URL(fileURLWithPath: path)]
+            )
         }
 
         if CommandLine.arguments.contains("--settings-demo") {
@@ -529,6 +549,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         lastPerform = (key, Date())
 
         Log.write("perform \(item.id) on \(urls.count) file(s)")
+
+        // Conversions and editors write beside the original. Make sure the
+        // bookmark is active before any engine tries to create a temp file.
+        // Read QR is the one non-action that never writes.
+        if item.id != "tool:readqr" {
+            guard FolderAccess.shared.ensureAccess() else {
+                hud.fail("Grant Folder Access… so results can be saved beside the original.")
+                return
+            }
+        }
 
         if item.id.hasPrefix("action:") {
             performAction(item, on: urls)

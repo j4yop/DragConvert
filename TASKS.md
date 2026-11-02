@@ -10,7 +10,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 | Tools | 17 implementations + PDF text/OCR | 26 |
 | File actions | 6 (Copy to clipboard, terminal picker) | 6 |
 | Families | 2 of 9 (images, PDF) | 9 |
-| Unit tests | 56 | 120+ |
+| Unit tests | 57 | 120+ |
 
 ---
 

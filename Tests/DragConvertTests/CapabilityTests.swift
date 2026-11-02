@@ -133,6 +133,27 @@ final class CapabilityTests: XCTestCase {
         XCTAssertEqual(out.path, "/tmp/Page 001 3.jpg")
     }
 
+    func testAtomicWriteReportsPermissionBeforeCreatingATempFile() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: dir.path)
+
+        XCTAssertThrowsError(
+            try writeAtomically(to: dir.appendingPathComponent("result.txt")) { tmp in
+                try "hello".write(to: tmp, atomically: true, encoding: .utf8)
+            }
+        ) { error in
+            let ns = error as NSError
+            XCTAssertEqual(ns.domain, NSCocoaErrorDomain)
+            XCTAssertEqual(ns.code, NSFileWriteNoPermissionError)
+        }
+    }
+
     func testAtomicWriteLeavesNoTempFile() throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
