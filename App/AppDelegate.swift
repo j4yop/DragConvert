@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var adjustTask: Task<Void, Never>?
     private var compressWindow: CompressWindowController?
     private var compressTask: Task<Void, Never>?
+    private var compressPDFWindow: CompressPDFWindowController?
     private var metadataWindow: MetadataWindowController?
     private var metadataTask: Task<Void, Never>?
     private var splitWindow: SplitPDFWindowController?
@@ -93,6 +94,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentOrganize(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--pdfcompress-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentCompress(for: [URL(fileURLWithPath: path)])
         }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
@@ -518,18 +525,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func presentCompress(for urls: [URL]) {
         guard let input = urls.first else { return }
-        guard FileKind.detect(input) == .image else {
-            hud.fail("PDF and video compression are next")
-            return
-        }
         _ = FolderAccess.shared.ensureAccess()
-        let controller = CompressWindowController(url: input)
-        controller.onApply = { [weak self] spec in
-            self?.runCompress(input: input, spec: spec)
+
+        switch FileKind.detect(input) {
+        case .image:
+            let controller = CompressWindowController(url: input)
+            controller.onApply = { [weak self] spec in
+                self?.runCompress(input: input, spec: spec)
+            }
+            compressWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+
+        case .pdf:
+            let controller = CompressPDFWindowController(url: input)
+            controller.onApply = { [weak self] spec in
+                self?.runPDFCompress(input: input, spec: spec)
+            }
+            compressPDFWindow = controller
+            controller.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+
+        default:
+            hud.fail("Compression for this file type is next")
         }
-        compressWindow = controller
-        controller.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func runPDFCompress(input: URL, spec: PDFCompressSpec) {
+        let job = Job(inputs: [input], operation: .pdfCompress(spec))
+        hud.onCancel = { [weak self] in self?.pdfTask?.cancel() }
+        hud.show(title: "Compressing PDF", subtitle: "Preparing…")
+
+        pdfTask = Task { @MainActor [weak self] in
+            do {
+                let outputs = try await Task.detached(priority: .userInitiated) {
+                    try await PDFCompressEngine().run(job) { _ in }
+                }.value
+                self?.lastOutputs = outputs
+                self?.announceCompression(input: input, outputs: outputs)
+                NSSound(named: "Glass")?.play()
+                Log.write("pdf compress done \(outputs.map(\.path))")
+            } catch {
+                self?.hud.fail(error.friendlyMessage)
+                NSSound.beep()
+                Log.write("pdf compress failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     private func runCompress(input: URL, spec: CompressSpec) {

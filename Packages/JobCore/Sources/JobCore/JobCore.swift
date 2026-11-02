@@ -118,6 +118,20 @@ public struct PDFOrganizeSpec: Equatable, Sendable {
     }
 }
 
+public struct PDFCompressSpec: Equatable, Sendable {
+    public enum Mode: String, Sendable {
+        case balanced, targetSize
+    }
+
+    public var mode: Mode
+    public var targetBytes: Int
+
+    public init(mode: Mode, targetBytes: Int = 500 * 1024) {
+        self.mode = mode
+        self.targetBytes = targetBytes
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)
@@ -127,6 +141,7 @@ public enum JobOperation: Equatable, Sendable {
     case pdfMerge
     case pdfSplit(PDFSplitSpec)
     case pdfOrganize(PDFOrganizeSpec)
+    case pdfCompress(PDFCompressSpec)
     case tool(id: String)
 }
 
