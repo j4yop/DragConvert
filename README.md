@@ -21,6 +21,7 @@ make log     # drag / hover / drop / job — with full output paths
 
 - Menu-bar app, sandboxed, ad-hoc signed
 - Wheel appears on ⇧ / ⌥⌘ / ⌃ and stays anchored
+- Keyboard: 1–9 picks a wedge, arrows cycle, Return applies, Escape cancels
 - Hover from the polled pointer; release fallback if the drag destination doesn't fire
 - Progress HUD with running / success / failure states and cancel
 - Batch selections: “3 of 5 saved”, stops on the first error

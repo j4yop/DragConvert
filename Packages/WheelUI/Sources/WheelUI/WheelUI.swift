@@ -21,7 +21,7 @@ public final class WheelPanel: NSPanel {
         becomesKeyOnlyIfNeeded = true
     }
 
-    public override var canBecomeKey: Bool { false }
+    public override var canBecomeKey: Bool { true }
     public override var canBecomeMain: Bool { false }
 }
 
@@ -29,6 +29,9 @@ public final class WheelView: NSView {
     public var items: [WheelItem] = [] { didSet { needsDisplay = true } }
     public var filename: String = "" { didSet { needsDisplay = true } }
     public var onDrop: ((WheelItem, [URL]) -> Void)?
+    /// Set after a keyboard choice. The panel stays up to absorb Finder's
+    /// pending drop, but ignores hover and performs nothing else.
+    public var locked = false
 
     private var hoveredIndex: Int?
     private let accent = NSColor(srgbRed: 1.0, green: 0.42, blue: 0.18, alpha: 1.0)
@@ -85,7 +88,22 @@ public final class WheelView: NSView {
 
     /// Hover driven by the polled pointer, not by drag events. A panel that
     /// appears mid-drag does not reliably receive `draggingUpdated`.
+    public func highlight(_ index: Int?) {
+        hoveredIndex = index
+        needsDisplay = true
+    }
+
+    public func moveHighlight(by delta: Int) {
+        guard !items.isEmpty else { return }
+        let current = hoveredIndex ?? (delta > 0 ? -1 : 0)
+        let next = ((current + delta) % items.count + items.count) % items.count
+        hoveredIndex = next
+        needsDisplay = true
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+    }
+
     public func updateHover(atScreenPoint point: CGPoint) {
+        guard !locked else { return }
         guard let window else { return }
         let inWindow = window.convertPoint(fromScreen: point)
         let inView = convert(inWindow, from: nil)
@@ -105,12 +123,14 @@ public final class WheelView: NSView {
     // MARK: Drag destination
 
     public override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard !locked else { return .copy }
         hoveredIndex = index(at: convert(sender.draggingLocation, from: nil))
         needsDisplay = true
         return .copy
     }
 
     public override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard !locked else { return .copy }
         hoveredIndex = index(at: convert(sender.draggingLocation, from: nil))
         needsDisplay = true
         return .copy
@@ -122,6 +142,9 @@ public final class WheelView: NSView {
     }
 
     public override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        // A keyboard choice already ran; absorb Finder's pending drop so the
+        // file is not also moved or copied somewhere behind the wheel.
+        if locked { return true }
         let objects = sender.draggingPasteboard.readObjects(
             forClasses: [NSURL.self],
             options: [.urlReadingFileURLsOnly: true]
@@ -221,8 +244,10 @@ public final class WheelView: NSView {
 @MainActor
 public final class WheelController {
     public var onDrop: ((WheelItem, [URL]) -> Void)?
+    public var onActivate: ((WheelItem) -> Void)?
 
     private let panel = WheelPanel()
+    private var keyMonitor: Any?
     private let wheel: WheelView
     private var isShown = false
 
@@ -237,6 +262,8 @@ public final class WheelController {
 
     public var visible: Bool { isShown }
     public var hoveredItem: WheelItem? { isShown ? wheel.hoveredItem : nil }
+    public var isKeyWindow: Bool { panel.isKeyWindow }
+    public var isLocked: Bool { wheel.locked }
 
     /// Shows the wheel, anchored once. It deliberately does **not** follow the
     /// pointer: the pointer has to travel out to a wedge to select it.
@@ -248,7 +275,11 @@ public final class WheelController {
         if !isShown {
             move(to: point)
             panel.orderFrontRegardless()
+            // A non-activating panel can own the keyboard without bringing
+            // the app forward, which is how the wheel gets keys mid-drag.
+            panel.makeKey()
             isShown = true
+            installKeyMonitor()
         }
         wheel.needsDisplay = true
     }
@@ -272,7 +303,59 @@ public final class WheelController {
     public func hide() {
         guard isShown else { return }
         panel.orderOut(nil)
+        removeKeyMonitor()
         isShown = false
+        wheel.locked = false
         wheel.items = []
+    }
+
+    // MARK: Keyboard
+
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, self.isShown, self.panel.isKeyWindow else { return event }
+            return self.handleKey(event) ? nil : event
+        }
+    }
+
+    private func removeKeyMonitor() {
+        if let keyMonitor {
+            NSEvent.removeMonitor(keyMonitor)
+            self.keyMonitor = nil
+        }
+    }
+
+    private func handleKey(_ event: NSEvent) -> Bool {
+        switch event.keyCode {
+        case 53: // Escape
+            hide()
+            return true
+        case 36, 76: // Return, keypad Enter
+            if let item = wheel.hoveredItem { activate(item) }
+            return true
+        case 123, 126: // Left, Up
+            wheel.moveHighlight(by: -1)
+            return true
+        case 124, 125: // Right, Down
+            wheel.moveHighlight(by: 1)
+            return true
+        default:
+            guard let character = event.charactersIgnoringModifiers?.first,
+                  let digit = character.wholeNumberValue,
+                  (1...9).contains(digit),
+                  digit <= wheel.items.count else { return false }
+            wheel.highlight(digit - 1)
+            if let item = wheel.hoveredItem { activate(item) }
+            return true
+        }
+    }
+
+    private func activate(_ item: WheelItem) {
+        wheel.locked = true
+        // Keep the panel under the pointer so Finder's pending drop is
+        // absorbed by it instead of landing on whatever is behind.
+        move(to: NSEvent.mouseLocation)
+        onActivate?(item)
     }
 }

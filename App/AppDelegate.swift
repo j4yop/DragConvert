@@ -51,6 +51,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.perform(item: item, on: urls)
         }
 
+        wheel.onActivate = { [weak self] item in
+            guard let self, let files = self.lastSession?.files, !files.isEmpty else { return }
+            Log.write("keyboard activate \(item.id)")
+            self.perform(item: item, on: files)
+        }
+
         monitor.onChange = { [weak self] session in
             self?.updateWheel(for: session)
         }
@@ -123,6 +129,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             presentRedact(for: [URL(fileURLWithPath: path)])
         }
 
+        if CommandLine.arguments.contains("--wheel-demo") {
+            let items = Capabilities.items(mode: .actions, kind: .pdf)
+            wheel.show(items: items, at: NSEvent.mouseLocation, label: "Panel.pdf")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                Log.write("wheel demo key=\(self.wheel.isKeyWindow) visible=\(self.wheel.visible) appActive=\(NSApp.isActive) front=\(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "nil")")
+            }
+        }
+
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
             showWelcome()
             UserDefaults.standard.set(true, forKey: "hasSeenWelcome")
@@ -157,6 +171,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             finishDrag()
             return
         }
+        if wheel.isLocked { return }
         lastSession = session
 
         guard let mode = WheelMode.from(session.modifiers) else {
@@ -196,7 +211,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func finishDrag() {
-        Log.write("drag ended, visible=\(wheel.visible) hovered=\(wheel.hoveredItem?.id ?? "none")")
+        Log.write("drag ended, visible=\(wheel.visible) hovered=\(wheel.hoveredItem?.id ?? "none") locked=\(wheel.isLocked)")
+        if wheel.isLocked {
+            // A keyboard choice already ran; keep the panel up only long
+            // enough to absorb Finder's drop, then close.
+            wheel.hide()
+            lastSession = nil
+            lastSignature = nil
+            lastHoveredID = nil
+            return
+        }
 
         // If the panel never received `performDragOperation` (it appeared
         // mid-drag, which can confuse the drag destination), finish the job

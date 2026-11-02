@@ -45,6 +45,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **PDF-6 · Images → PDF** — multi-image drop on the convert wheel’s PDF target builds one PDF, one page per image in selection order; engine test
 - [x] **PDF-7 · Annotate PDF** — text, rect, ellipse, arrow, ink, colour well, page navigation, undo, saves “<name> Annotated.pdf”; engine test
 - [x] **PDF-8 · Redact PDF** — draw boxes, rasterise + black out, true content removal (no selectable text survives), saves “<name> Redacted.pdf”; test proves text is gone
+- [x] **WHEEL-2 · Keyboard navigation** — keyable non-activating panel + local keyDown monitor; 1–9, arrows, Return, Escape; locked absorb state; verified key status without changing the frontmost app
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -63,14 +64,11 @@ does not reliably receive `performDragOperation`.
 - [ ] **DRAG-2 · Mixed-selection notice** — 0.5d
   Acceptance: PDF + PNG shows “Pick files of one kind” in the HUD instead of no wheel; actions wheel still works.
 
-- [ ] **WHEEL-2 · Keyboard navigation** — 1d
-  **Unblocked by the Vorssaint study:** make the wheel a keyable `.nonactivatingPanel` (`canBecomeKey = true`), call `makeKey()` when shown, and add a local `keyDown` monitor. No Input Monitoring, no Accessibility. Adopt this in the next wheel pass.
-
 - [ ] **IMG-1b · Batch crop** — 0.5d
   Acceptance: 5 images → crop panel for the first, same rect applied to all 5, outputs “<name> Cropped.jpg”.
 
-- [ ] **WHEEL-2 · Keyboard navigation** — 1d ← next
-  Acceptance: 1–9 select, ←/→ cycle, ↵ apply, esc cancel. Use the Vorssaint approach: keyable non-activating panel + local keyDown monitor, no Input Monitoring.
+- [ ] **VERIFY-2 · Keyboard mid-drag** — 0.25d ← next
+  Acceptance: drag a file, hold ⇧, press 2 then Return; the chosen conversion runs, Finder’s pending drop is absorbed, and no duplicate file appears.
 
 - [ ] **IMG-8 · Crop panel polish** — 1d
   Acceptance: 8 handles (edges too), editable W/H fields, 0.5 s open for a 50 MP image.
