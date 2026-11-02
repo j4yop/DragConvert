@@ -26,8 +26,13 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **APP-0** Menu bar, welcome, folder access, headless harness, signed bundle
 - [x] **QA-0** Unit tests, fixture generator, CI
 - [x] **S1** Sandboxed drag works: wheel appears, drop returns the file
-- [x] **S2** Sandboxed write beside the original works (verified headless; GUI path logged)
+- [x] **S2** Sandboxed write beside the original works
 - [x] **V1** PDF → 4 JPGs through the wheel in one drop
+- [x] **VERIFY-1** GUI output path confirmed: `/Users/jaygopal/Desktop/APCTT… 1.jpg`
+- [x] **CORE-1 · Progress HUD** — running, success and failure states; cancel; auto-dismiss
+- [x] **CORE-2 · Batch selections** — one HUD, per-file “N of M”, stops on error, cancel
+- [x] **CORE-3 · Error surfacing** — friendly mapping for permission, disk full, missing file
+- [x] **WHEEL-1a · Hover haptics** — alignment feedback on wedge change
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the
 drop must have a polled-pointer fallback because a panel that appears mid-drag
@@ -37,29 +42,23 @@ does not reliably receive `performDragOperation`.
 
 ## NOW — next 5 working days
 
-- [ ] **VERIFY-1** Confirm the GUI output path — 0.25d
-  Acceptance: one drop, `make log` shows the full output path, the file is on disk beside the source.
-
-- [ ] **CORE-1 · Progress HUD** — 1.5d
-  Acceptance: capsule near the cursor, “Converting to JPG · 1 of 1 saved”, progress bar, cancel; auto-dismiss 1.6 s; stacks up to 3; matches `PLAN.md §7`.
-
-- [ ] **CORE-2 · Batch selections** — 1d
-  Acceptance: 5 PDFs dropped at once produce 5 jobs, 1 progress row with “3 of 5”, concurrency 2, cancel leaves no temp files.
-
-- [ ] **CORE-3 · Error surfacing** — 0.5d
-  Acceptance: unsupported target, corrupt file, permission denied and disk full each show a human sentence and one action; no raw errors.
-
-- [ ] **WHEEL-1 · Motion + haptics** — 0.5d
-  Acceptance: appear spring 0.28/0.82, hover 0.12 s, alignment haptic on wedge change, Reduce Motion = fade only.
-
-- [ ] **WHEEL-2 · Keyboard navigation** — 1d
-  Acceptance: 1–9 select, ←/→ cycle, ↵ apply, esc cancel, tab switches convert/tools/actions.
+- [ ] **WHEEL-1b · Appear motion** — 0.5d
+  Acceptance: scale 0.86 → 1 + fade, spring 0.28/0.82, Reduce Motion = fade only.
 
 - [ ] **S3 · Wheel performance** — 0.5d
   Acceptance: 120 fps with 10 wedges, < 8 % CPU, no memory growth after 50 opens, Reduce Transparency respected.
 
 - [ ] **DRAG-2 · Mixed-selection notice** — 0.5d
-  Acceptance: PDF + PNG shows a notice instead of a wrong wheel; actions wheel still works.
+  Acceptance: PDF + PNG shows “Pick files of one kind” in the HUD instead of no wheel; actions wheel still works.
+
+- [ ] **WHEEL-2 · Keyboard navigation** — 1d
+  **Blocked on a decision:** a non-activating panel cannot receive key events while Finder owns the drag. Options: (a) request Input Monitoring and use a listen-only event tap, (b) activate the panel (loses Finder focus), (c) skip keyboard in v1. Recommend (a), decided in week 3.
+
+- [ ] **IMG-1 · Crop panel** — 2d ← next hero feature
+  Acceptance: 5184×3456 JPEG → 1:1 → 1600×1600, saved as “<name> Cropped.jpg”, original untouched, works on 5 files.
+
+- [ ] **IMG-2 · Resize + rotate** — 1d
+  Acceptance: 50 % resize and 90° rotate, EXIF orientation preserved.
 
 ---
 

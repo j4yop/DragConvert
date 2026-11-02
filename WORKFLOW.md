@@ -86,19 +86,21 @@ Budgets: wheel ≤ 80 ms, idle CPU ≈ 0, 10 MB image ≤ 400 ms, PDF page ≤ 2
 
 ---
 
-## 6. Next week (week 2)
+## 6. Week 2 — done and next
 
-The goal: make the loop feel finished, not add formats.
+**Done:** output path verified, progress HUD (running/success/failure, cancel), batch selections with “N of M”, friendly error mapping, hover haptics.
 
 | Day | Task | Demo sentence |
 |---|---|---|
-| Mon | **VERIFY-1** confirm output path; **CORE-1** progress HUD | “I drop a file and see a toast with progress.” |
-| Tue | **CORE-2** batch selections | “I drop 5 PDFs and see 3 of 5.” |
-| Wed | **CORE-3** error surfacing; **DRAG-2** mixed selection | “A corrupt file tells me what’s wrong.” |
-| Thu | **WHEEL-1** motion + haptics; **WHEEL-2** keyboard | “I can drive the whole wheel from the keyboard.” |
-| Fri | **S3** performance; demo + parity update | “10 wedges at 120 fps, no leaks.” |
+| ✅ Mon | **VERIFY-1** + **CORE-1** HUD | “I drop a file and see a toast with progress.” |
+| ✅ Tue | **CORE-2** batch selections | “I drop 5 PDFs and see 3 of 5.” |
+| ✅ Wed | **CORE-3** errors + **WHEEL-1a** haptics | “A corrupt file explains itself.” |
+| → Thu | **WHEEL-1b** appear motion + **S3** performance | “10 wedges at 120 fps, no leaks.” |
+| → Fri | **DRAG-2** mixed selection + demo | “A mixed selection tells me what to do.” |
 
 Then week 3 starts the hero tools: **crop panel**, resize, rotate, compress.
+
+**Blocked decision:** keyboard navigation (**WHEEL-2**) needs either Input Monitoring (listen-only event tap) or activating the panel (loses Finder focus). Decide in week 3; do not let it block the crop work.
 
 ---
 

@@ -93,6 +93,12 @@ public final class WheelView: NSView {
         if index != hoveredIndex {
             hoveredIndex = index
             needsDisplay = true
+            if index != nil {
+                NSHapticFeedbackManager.defaultPerformer.perform(
+                    .alignment,
+                    performanceTime: .now
+                )
+            }
         }
     }
 

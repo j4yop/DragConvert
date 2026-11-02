@@ -23,6 +23,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// the same release. Deduplicate so we never convert twice.
     private var lastPerform: (key: String, date: Date)?
 
+    private let hud = HUDController()
+    private var batchTask: Task<Void, Never>?
+    private var engineTask: Task<[URL], Error>?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.write("launched")
         setUpStatusItem()
@@ -36,6 +40,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.updateWheel(for: session)
         }
         monitor.start()
+
+        if CommandLine.arguments.contains("--hud-demo") {
+            hud.show(title: "Converting to JPG", subtitle: "2 of 4 pages")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                self.hud.succeed(title: "Converted to JPG", subtitle: "1 of 1 saved")
+            }
+        }
 
         if !UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
             showWelcome()
@@ -130,8 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func perform(item: WheelItem, on urls: [URL]) {
         lastSession = nil
-
-        guard let input = urls.first else { return }
+        guard !urls.isEmpty else { return }
 
         let key = item.id + "|" + urls.map(\.path).joined(separator: "|")
         if let last = lastPerform, last.key == key, Date().timeIntervalSince(last.date) < 1.0 {
@@ -145,54 +155,95 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard item.id.hasPrefix("convert:") else {
             NSSound.beep()
             Log.write("not implemented: \(item.id)")
-            flashStatus("○")
+            hud.fail("\(item.title) isn’t built yet")
             return
         }
 
         let target = String(item.id.dropFirst("convert:".count))
-        let job = Job(inputs: [input], operation: .convert(to: target))
+        let files = urls
 
-        let engine: Engine?
-        switch FileKind.detect(input) {
-        case .pdf:
-            engine = PDFToImageEngine()
-        case .image:
-            engine = ImageConvertEngine()
-        default:
-            engine = nil
+        batchTask?.cancel()
+        engineTask?.cancel()
+
+        hud.onCancel = { [weak self] in
+            Log.write("cancel requested")
+            self?.engineTask?.cancel()
+            self?.batchTask?.cancel()
         }
-
-        guard let engine, engine.canHandle(job) else {
-            NSSound.beep()
-            Log.write("no engine for \(input.pathExtension) → \(target)")
-            flashStatus("○")
-            return
-        }
-
+        hud.show(
+            title: "Converting to \(target.uppercased())",
+            subtitle: files.count == 1 ? "Preparing…" : "1 of \(files.count)"
+        )
         statusItem?.button?.title = "◉"
-        Log.write("job start \(input.path) → \(target)")
 
-        Task { @MainActor [weak self] in
-            do {
-                let outputs = try await Task.detached(priority: .userInitiated) {
+        batchTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            var outputs: [URL] = []
+
+            for (index, input) in files.enumerated() {
+                if Task.isCancelled { break }
+
+                let job = Job(inputs: [input], operation: .convert(to: target))
+                guard let engine = self.engine(for: input), engine.canHandle(job) else {
+                    self.hud.fail("Can’t convert \(input.lastPathComponent) to \(target.uppercased())")
+                    self.statusItem?.button?.title = "◎"
+                    return
+                }
+
+                if files.count > 1 {
+                    self.hud.update(subtitle: "\(index + 1) of \(files.count)")
+                }
+
+                Log.write("job start \(input.path) → \(target)")
+                let task = Task.detached(priority: .userInitiated) {
                     try await engine.run(job) { _ in }
-                }.value
-                self?.statusItem?.button?.title = "◎"
-                self?.lastOutputs = outputs
-                NSSound(named: "Glass")?.play()
-                Log.write("job done \(outputs.map(\.path))")
-            } catch {
-                self?.statusItem?.button?.title = "◎"
-                NSSound.beep()
-                Log.write("job failed: \(error.localizedDescription)")
+                }
+                self.engineTask = task
+
+                do {
+                    let result = try await task.value
+                    outputs.append(contentsOf: result)
+                    self.hud.update(
+                        subtitle: files.count == 1
+                            ? "Saving…"
+                            : "\(index + 1) of \(files.count) saved"
+                    )
+                } catch is CancellationError {
+                    self.hud.hide()
+                    self.statusItem?.button?.title = "◎"
+                    Log.write("cancelled")
+                    return
+                } catch {
+                    self.hud.fail(error.friendlyMessage)
+                    self.statusItem?.button?.title = "◎"
+                    NSSound.beep()
+                    Log.write("job failed \(input.path): \(error.localizedDescription)")
+                    return
+                }
             }
+
+            if Task.isCancelled {
+                self.hud.hide()
+                self.statusItem?.button?.title = "◎"
+                return
+            }
+
+            self.lastOutputs = outputs
+            self.statusItem?.button?.title = "◎"
+            self.hud.succeed(
+                title: "Converted to \(target.uppercased())",
+                subtitle: "\(files.count) of \(files.count) saved"
+            )
+            NSSound(named: "Glass")?.play()
+            Log.write("batch done \(outputs.map(\.path))")
         }
     }
 
-    private func flashStatus(_ title: String) {
-        statusItem?.button?.title = title
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            self?.statusItem?.button?.title = "◎"
+    private func engine(for input: URL) -> Engine? {
+        switch FileKind.detect(input) {
+        case .pdf: return PDFToImageEngine()
+        case .image: return ImageConvertEngine()
+        default: return nil
         }
     }
 

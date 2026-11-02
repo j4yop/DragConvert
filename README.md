@@ -22,9 +22,14 @@ make log     # drag / hover / drop / job — with full output paths
 - Menu-bar app, sandboxed, ad-hoc signed
 - Wheel appears on ⇧ / ⌥⌘ / ⌃ and stays anchored
 - Hover from the polled pointer; release fallback if the drag destination doesn't fire
+- Progress HUD with running / success / failure states and cancel
+- Batch selections: “3 of 5 saved”, stops on the first error
+- Friendly errors for permission, disk full and missing files
 - PDF → JPG/PNG/TIFF at 300 DPI, all pages
 - Image → JPG/PNG/HEIC/TIFF/BMP/PDF
 - Atomic writes, collision naming, 8 unit tests
+
+Private repo: <https://github.com/j4yop/DragConvert>
 
 ## Read in this order
 
