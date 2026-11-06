@@ -136,6 +136,18 @@ public enum WheelShortcuts {
         set { UserDefaults.standard.set(newValue.rawValue, forKey: actionsKey) }
     }
 
+    /// Older builds defaulted Tools to Option+Command; migrate that one
+    /// legacy value once so the shipping Tangerine shortcut is the default.
+    public static func migrateLegacyDefaults() {
+        let defaults = UserDefaults.standard
+        guard defaults.string(forKey: toolsKey) == WheelShortcut.optionCommand.rawValue,
+              defaults.object(forKey: "didMigrateToolsShortcut") == nil else {
+            return
+        }
+        defaults.set(WheelShortcut.optionShift.rawValue, forKey: toolsKey)
+        defaults.set(true, forKey: "didMigrateToolsShortcut")
+    }
+
     /// Exact modifier match. Actions win over tools, tools over convert, so a
     /// duplicated binding still resolves deterministically.
     public static func mode(for flags: NSEvent.ModifierFlags) -> WheelMode? {

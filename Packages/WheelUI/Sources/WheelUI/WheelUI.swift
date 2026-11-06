@@ -17,7 +17,22 @@ public struct WheelPreview {
 }
 
 public final class WheelPanel: NSPanel {
+    private let glass = NSVisualEffectView()
+    private let container = NSView()
+
     public init(size: CGFloat = 420) {
+        container.frame = NSRect(x: 0, y: 0, width: size, height: size)
+        container.wantsLayer = true
+
+        glass.frame = container.bounds
+        glass.autoresizingMask = [.width, .height]
+        glass.material = .popover
+        glass.blendingMode = .behindWindow
+        glass.state = .active
+        glass.appearance = NSAppearance(named: .aqua)
+        glass.maskImage = Self.ringMask(size: size)
+        container.addSubview(glass)
+
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: size, height: size),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -34,14 +49,46 @@ public final class WheelPanel: NSPanel {
         hidesOnDeactivate = false
         animationBehavior = .none
         becomesKeyOnlyIfNeeded = true
+        contentView = container
     }
 
     public override var canBecomeKey: Bool { true }
     public override var canBecomeMain: Bool { false }
+
+    public func addWheel(_ view: NSView) {
+        view.frame = container.bounds
+        view.autoresizingMask = [.width, .height]
+        container.addSubview(view)
+    }
+
+    public func setGlassProgress(_ progress: CGFloat) {
+        let t = min(max(progress, 0), 1)
+        glass.alphaValue = max(0, min(1, (t - 0.15) / 0.85))
+    }
+
+    private static func ringMask(size: CGFloat) -> NSImage {
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            let outer = NSBezierPath(ovalIn: rect.insetBy(dx: 14, dy: 14))
+            let inner = NSBezierPath(ovalIn: rect.insetBy(dx: 146, dy: 146))
+            let ring = NSBezierPath()
+            ring.append(outer)
+            ring.append(inner)
+            ring.windingRule = .evenOdd
+            NSColor.white.setFill()
+            ring.fill()
+            return true
+        }
+        return image
+    }
 }
 
 public final class WheelView: NSView {
-    public var items: [WheelItem] = [] { didSet { needsDisplay = true } }
+    public var items: [WheelItem] = [] {
+        didSet {
+            hoverLevels = Array(repeating: 0, count: items.count)
+            needsDisplay = true
+        }
+    }
     public var preview: WheelPreview? { didSet { needsDisplay = true } }
     public var onDrop: ((WheelItem, [URL]) -> Void)?
     /// Set after a keyboard choice. The panel stays up to absorb Finder's
@@ -52,16 +99,20 @@ public final class WheelView: NSView {
     /// deterministic and Reduce Motion can show the final state immediately.
     public var appearProgress: CGFloat = 1 { didSet { needsDisplay = true } }
 
-    private var hoveredIndex: Int?
+    /// The selected wedge gets a short white confirmation ring while the
+    /// wheel fades into the progress HUD.
+    public var confirmIndex: Int? { didSet { needsDisplay = true } }
 
-    private var hapticsEnabled: Bool {
-        UserDefaults.standard.object(forKey: "hapticsEnabled") == nil
-            || UserDefaults.standard.bool(forKey: "hapticsEnabled")
-    }
-    private let accentTop = NSColor(srgbRed: 1.0, green: 0.60, blue: 0.30, alpha: 1.0)
-    private let accentBottom = NSColor(srgbRed: 0.93, green: 0.31, blue: 0.13, alpha: 1.0)
-    private let petalTop = NSColor(srgbRed: 1.0, green: 0.975, blue: 0.94, alpha: 0.97)
-    private let petalBottom = NSColor(srgbRed: 0.98, green: 0.89, blue: 0.81, alpha: 0.95)
+    /// When Reduce Transparency is on, the wheel draws an opaque backdrop
+    /// instead of asking the window server for a blur.
+    public var glassEnabled: Bool = true
+
+    public private(set) var hoveredIndex: Int?
+    private var hoverLevels: [CGFloat] = []
+    private var hoverTimer: Timer?
+
+    private let accent = NSColor(srgbRed: 1.0, green: 0.322, blue: 0.0, alpha: 1.0)
+    private let accentTop = NSColor(srgbRed: 1.0, green: 0.44, blue: 0.12, alpha: 1.0)
 
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -171,19 +222,14 @@ public final class WheelView: NSView {
     /// Hover driven by the polled pointer, not by drag events. A panel that
     /// appears mid-drag does not reliably receive `draggingUpdated`.
     public func highlight(_ index: Int?) {
-        hoveredIndex = index
-        needsDisplay = true
+        setHover(index, feedback: false)
     }
 
     public func moveHighlight(by delta: Int) {
         guard !items.isEmpty else { return }
         let current = hoveredIndex ?? (delta > 0 ? -1 : 0)
         let next = ((current + delta) % items.count + items.count) % items.count
-        hoveredIndex = next
-        needsDisplay = true
-        if hapticsEnabled {
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
-        }
+        setHover(next, feedback: true)
     }
 
     public func updateHover(atScreenPoint point: CGPoint) {
@@ -191,38 +237,70 @@ public final class WheelView: NSView {
         guard let window else { return }
         let inWindow = window.convertPoint(fromScreen: point)
         let inView = convert(inWindow, from: nil)
-        let index = index(at: inView)
-        if index != hoveredIndex {
-            hoveredIndex = index
-            needsDisplay = true
-            if index != nil, hapticsEnabled {
-                NSHapticFeedbackManager.defaultPerformer.perform(
-                    .alignment,
-                    performanceTime: .now
-                )
+        setHover(index(at: inView), feedback: true)
+    }
+
+    private func setHover(_ index: Int?, feedback: Bool) {
+        guard index != hoveredIndex else { return }
+        hoveredIndex = index
+        startHoverAnimation()
+        if feedback, index != nil {
+            Feedback.shared.hover()
+        }
+    }
+
+    private func startHoverAnimation() {
+        hoverTimer?.invalidate()
+        let timer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] timer in
+            guard let self else { timer.invalidate(); return }
+            var stillMoving = false
+            if self.hoverLevels.count != self.items.count {
+                self.hoverLevels = Array(repeating: 0, count: self.items.count)
+            }
+            for index in self.items.indices {
+                let target: CGFloat = index == self.hoveredIndex ? 1 : 0
+                let delta = target - self.hoverLevels[index]
+                if abs(delta) > 0.004 {
+                    self.hoverLevels[index] += delta * 0.22
+                    stillMoving = true
+                } else {
+                    self.hoverLevels[index] = target
+                }
+            }
+            self.needsDisplay = true
+            if !stillMoving {
+                timer.invalidate()
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        hoverTimer = timer
+    }
+
+    public func resetInteraction() {
+        hoverTimer?.invalidate()
+        hoverTimer = nil
+        hoveredIndex = nil
+        hoverLevels = Array(repeating: 0, count: items.count)
+        confirmIndex = nil
+        needsDisplay = true
     }
 
     // MARK: Drag destination
 
     public override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard !locked else { return .copy }
-        hoveredIndex = index(at: convert(sender.draggingLocation, from: nil))
-        needsDisplay = true
+        setHover(index(at: convert(sender.draggingLocation, from: nil)), feedback: true)
         return .copy
     }
 
     public override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard !locked else { return .copy }
-        hoveredIndex = index(at: convert(sender.draggingLocation, from: nil))
-        needsDisplay = true
+        setHover(index(at: convert(sender.draggingLocation, from: nil)), feedback: true)
         return .copy
     }
 
     public override func draggingExited(_ sender: NSDraggingInfo?) {
-        hoveredIndex = nil
-        needsDisplay = true
+        setHover(nil, feedback: false)
     }
 
     public override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
@@ -263,11 +341,13 @@ public final class WheelView: NSView {
     private func drawBackdrop() {
         let center = NSPoint(x: bounds.midX, y: bounds.midY)
         let radius = outerRadius + 13
+        let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        let useGlass = glassEnabled && !reduceTransparency
 
         NSGraphicsContext.saveGraphicsState()
         let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(0.68)
-        shadow.shadowBlurRadius = 18
+        shadow.shadowColor = NSColor.black.withAlphaComponent(useGlass ? 0.20 : 0.30)
+        shadow.shadowBlurRadius = useGlass ? 16 : 18
         shadow.shadowOffset = NSSize(width: 0, height: -4)
         shadow.set()
 
@@ -277,17 +357,21 @@ public final class WheelView: NSView {
                 width: radius * 2, height: radius * 2
             )
         )
-        NSGradient(
-            starting: NSColor(srgbRed: 0.96, green: 0.94, blue: 0.91, alpha: 0.97),
-            ending: NSColor(srgbRed: 0.88, green: 0.83, blue: 0.79, alpha: 0.95)
-        )?.draw(in: backdrop, angle: -90)
+        if useGlass {
+            NSColor(srgbRed: 1.0, green: 0.96, blue: 0.91, alpha: 0.10).setFill()
+            backdrop.fill()
+        } else {
+            NSGradient(
+                starting: NSColor(srgbRed: 0.97, green: 0.94, blue: 0.90, alpha: 0.98),
+                ending: NSColor(srgbRed: 0.89, green: 0.84, blue: 0.79, alpha: 0.97)
+            )?.draw(in: backdrop, angle: -90)
+        }
         NSGraphicsContext.restoreGraphicsState()
 
-        NSColor.white.withAlphaComponent(0.42).setStroke()
+        NSColor.white.withAlphaComponent(useGlass ? 0.32 : 0.42).setStroke()
         backdrop.lineWidth = 1
         backdrop.stroke()
 
-        // A small specular arc keeps the wheel feeling like glass.
         let specular = NSBezierPath()
         specular.appendArc(
             withCenter: center,
@@ -302,18 +386,60 @@ public final class WheelView: NSView {
     }
 
     private func drawPetals() {
+        let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        let glassGradient = NSGradient(
+            colorsAndLocations:
+                (NSColor(srgbRed: 1.0, green: 1.0, blue: 1.0, alpha: 0.82), 0.0),
+                (NSColor(srgbRed: 0.96, green: 0.97, blue: 0.96, alpha: 0.58), 0.68),
+                (NSColor(srgbRed: 0.96, green: 0.96, blue: 0.95, alpha: 0.76), 1.0)
+        )
+
         for i in items.indices {
             let path = roundedWedgePath(i, count: items.count)
-            let hovered = (i == hoveredIndex)
-            if hovered {
-                NSGradient(starting: accentTop, ending: accentBottom)?.draw(in: path, angle: -90)
+            let level = hoverLevels.indices.contains(i) ? hoverLevels[i] : 0
+
+            if reduceTransparency {
+                NSColor(srgbRed: 1.0, green: 0.97, blue: 0.93, alpha: 0.96).setFill()
+                path.fill()
             } else {
-                NSGradient(starting: petalTop, ending: petalBottom)?.draw(in: path, angle: -90)
+                glassGradient?.draw(in: path, relativeCenterPosition: .zero)
             }
 
-            (hovered ? NSColor.white.withAlphaComponent(0.52) : NSColor.white.withAlphaComponent(0.55)).setStroke()
-            path.lineWidth = 1
+            if level > 0.002 {
+                accent.withAlphaComponent(level).setFill()
+                path.fill()
+            }
+
+            let stroke = NSColor(
+                srgbRed: 0.36 + 0.40 * level,
+                green: 0.40 - 0.15 * level,
+                blue: 0.40 - 0.30 * level,
+                alpha: 0.20 + 0.24 * level
+            )
+            stroke.setStroke()
+            path.lineWidth = 0.8 + 0.4 * level
             path.stroke()
+
+            if level > 0.01 {
+                let (a0, a1) = wedgeAngles(i, count: items.count)
+                let ring = NSBezierPath()
+                ring.appendArc(
+                    withCenter: NSPoint(x: bounds.midX, y: bounds.midY),
+                    radius: innerRadius + 1.5,
+                    startAngle: a0 + 1.2,
+                    endAngle: a1 - 1.2,
+                    clockwise: false
+                )
+                ring.lineWidth = 1.4
+                NSColor.white.withAlphaComponent(0.68 * level).setStroke()
+                ring.stroke()
+            }
+
+            if i == confirmIndex {
+                NSColor.white.withAlphaComponent(0.85).setStroke()
+                path.lineWidth = 2.1
+                path.stroke()
+            }
 
             let (a0, a1) = wedgeAngles(i, count: items.count)
             let mid = (a0 + a1) / 2 * .pi / 180
@@ -322,10 +448,11 @@ public final class WheelView: NSView {
                 x: bounds.midX + cos(mid) * labelRadius,
                 y: bounds.midY + sin(mid) * labelRadius
             )
+            let brightness = 0.10 + 0.90 * level
             draw(
                 item: items[i],
                 at: p,
-                color: hovered ? .white : NSColor.black.withAlphaComponent(0.82),
+                color: NSColor(calibratedWhite: brightness, alpha: 0.90),
                 compact: items.count > 8
             )
         }
@@ -338,7 +465,13 @@ public final class WheelView: NSView {
             width: innerRadius * 2, height: innerRadius * 2
         )
 
-        NSColor(srgbRed: 0.99, green: 0.91, blue: 0.84, alpha: 0.84).setFill()
+        let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        NSColor(
+            srgbRed: 0.99,
+            green: 0.91,
+            blue: 0.84,
+            alpha: reduceTransparency ? 0.96 : 0.64
+        ).setFill()
         NSBezierPath(ovalIn: well).fill()
         NSColor.white.withAlphaComponent(0.36).setStroke()
         let ring = NSBezierPath(ovalIn: well.insetBy(dx: 1, dy: 1))
@@ -369,7 +502,7 @@ public final class WheelView: NSView {
         } else {
             NSColor.white.withAlphaComponent(0.76).setFill()
             NSBezierPath(roundedRect: thumbRect, xRadius: 16, yRadius: 16).fill()
-            drawSymbol("doc.fill", in: thumbRect.insetBy(dx: 18, dy: 18), color: accentBottom)
+            drawSymbol("doc.fill", in: thumbRect.insetBy(dx: 18, dy: 18), color: accent)
         }
 
         NSColor.white.withAlphaComponent(0.62).setStroke()
@@ -378,7 +511,7 @@ public final class WheelView: NSView {
         outline.stroke()
 
         let pillText = preview.fileSize
-        let pillFont = labelFont(size: 9.5, weight: .semibold)
+        let pillFont = labelFont(size: 10.5, weight: .semibold)
         let pillAttributes: [NSAttributedString.Key: Any] = [
             .font: pillFont,
             .foregroundColor: NSColor.black.withAlphaComponent(0.78)
@@ -397,7 +530,7 @@ public final class WheelView: NSView {
             withAttributes: pillAttributes
         )
 
-        let nameFont = labelFont(size: 8.5, weight: .medium)
+        let nameFont = labelFont(size: 9.5, weight: .medium)
         let style = NSMutableParagraphStyle()
         style.alignment = .center
         style.lineBreakMode = .byTruncatingMiddle
@@ -420,7 +553,7 @@ public final class WheelView: NSView {
             x: well.midX - 20, y: well.midY - 12,
             width: 40, height: 40
         )
-        drawSymbol("doc.fill", in: symbol, color: accentBottom)
+        drawSymbol("doc.fill", in: symbol, color: accent)
     }
 
     private func drawImageFilled(_ image: NSImage, in rect: NSRect, cornerRadius: CGFloat) {
@@ -462,15 +595,19 @@ public final class WheelView: NSView {
     }
 
     private func draw(item: WheelItem, at p: NSPoint, color: NSColor, compact: Bool) {
-        let font = labelFont(size: compact ? 9 : 10.5, weight: .semibold)
+        let font = labelFont(size: compact ? 10.5 : 13, weight: .semibold)
         let text = item.title as NSString
-        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: color,
+            .kern: compact ? 0.2 : 0.35
+        ]
         let size = text.size(withAttributes: attrs)
         var labelY = p.y - size.height / 2
 
         if !item.symbol.isEmpty,
            let base = NSImage(systemSymbolName: item.symbol, accessibilityDescription: nil) {
-            let cfg = NSImage.SymbolConfiguration(pointSize: compact ? 9 : 12, weight: .medium)
+            let cfg = NSImage.SymbolConfiguration(pointSize: compact ? 12 : 15, weight: .semibold)
             if let symbol = base.withSymbolConfiguration(cfg) {
                 let tinted = tint(symbol, color: color)
                 let s = symbol.size
@@ -508,6 +645,7 @@ public final class WheelController {
     /// Called when Escape dismisses the wheel. The drag can continue and the
     /// caller can avoid reopening until the drag ends.
     public var onCancel: (() -> Void)?
+    public var onOpenSettings: (() -> Void)?
 
     private let panel = WheelPanel()
     private var keyMonitor: Any?
@@ -517,10 +655,15 @@ public final class WheelController {
 
     public init() {
         wheel = WheelView(frame: NSRect(x: 0, y: 0, width: 420, height: 420))
-        panel.contentView = wheel
+        wheel.glassEnabled = !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        panel.addWheel(wheel)
         wheel.onDrop = { [weak self] item, urls in
-            self?.onDrop?(item, urls)
-            self?.hide()
+            guard let self else { return }
+            self.wheel.locked = true
+            self.wheel.confirmIndex = self.wheel.hoveredIndex
+            Feedback.shared.select()
+            self.onDrop?(item, urls)
+            self.hideAnimated()
         }
     }
 
@@ -540,7 +683,9 @@ public final class WheelController {
         if !isShown {
             move(to: point)
             let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-            wheel.appearProgress = reduceMotion ? 1 : 0
+            wheel.resetInteraction()
+            wheel.appearProgress = reduceMotion ? 1 : 0.45
+            panel.setGlassProgress(reduceMotion ? 1 : 0)
             panel.alphaValue = 0
             panel.orderFrontRegardless()
             // A non-activating panel can own the keyboard without bringing
@@ -548,8 +693,9 @@ public final class WheelController {
             panel.makeKey()
             isShown = true
             installKeyMonitor()
+            Feedback.shared.open()
             NSAnimationContext.runAnimationGroup { context in
-                context.duration = reduceMotion ? 0.10 : 0.18
+                context.duration = reduceMotion ? 0.10 : 0.16
                 context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 panel.animator().alphaValue = 1
             }
@@ -588,20 +734,35 @@ public final class WheelController {
         removeKeyMonitor()
         isShown = false
         wheel.locked = false
+        wheel.resetInteraction()
         wheel.items = []
         wheel.appearProgress = 1
+    }
+
+    private func hideAnimated() {
+        guard isShown else { return }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.16
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+        } completionHandler: { [weak self] in
+            Task { @MainActor in
+                self?.hide()
+            }
+        }
     }
 
     private func startAppearAnimation() {
         appearTimer?.invalidate()
         let start = Date()
-        let duration: TimeInterval = 0.26
-        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] timer in
+        let duration: TimeInterval = 0.20
+        let timer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] timer in
             guard let self else { timer.invalidate(); return }
             let t = min(1, Date().timeIntervalSince(start) / duration)
-            // ease-out cubic
-            let eased = 1 - pow(1 - t, 3)
-            self.wheel.appearProgress = CGFloat(0.86 + 0.14 * eased)
+            // cubic-bezier(.18,.82,.24,1), close to ease-out quart
+            let eased = 1 - pow(1 - t, 4)
+            self.wheel.appearProgress = CGFloat(0.45 + 0.55 * eased)
+            self.panel.setGlassProgress(CGFloat(eased))
             if t >= 1 {
                 timer.invalidate()
             }
@@ -630,8 +791,14 @@ public final class WheelController {
     private func handleKey(_ event: NSEvent) -> Bool {
         switch event.keyCode {
         case 53: // Escape
+            Feedback.shared.cancel()
             onCancel?()
-            hide()
+            hideAnimated()
+            return true
+        case 43: // comma
+            Feedback.shared.select()
+            onOpenSettings?()
+            hideAnimated()
             return true
         case 36, 76: // Return, keypad Enter
             if let item = wheel.hoveredItem { activate(item) }
@@ -655,6 +822,8 @@ public final class WheelController {
 
     private func activate(_ item: WheelItem) {
         wheel.locked = true
+        wheel.confirmIndex = wheel.hoveredIndex
+        Feedback.shared.select()
         // Keep the panel under the pointer so Finder's pending drop is
         // absorbed by it instead of landing on whatever is behind.
         move(to: NSEvent.mouseLocation)

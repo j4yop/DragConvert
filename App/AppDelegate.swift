@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: SettingsWindowController?
     private var aboutWindow: AboutWindowController?
     private var lastOutputs: [URL] = []
+    private var showMenuBarIcon = true
 
     private var lastSession: FileDragSession?
     private var lastSignature: String?
@@ -69,6 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "soundEnabled": true,
             "hapticsEnabled": true
         ])
+        WheelShortcuts.migrateLegacyDefaults()
 
         // Re-activate the home-folder security-scoped bookmark at launch.
         // Dragging a file grants read access to that file, but writing the
@@ -76,6 +78,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // conversion reads the input and then fails to create its temp file.
         _ = FolderAccess.shared.ensureAccess(promptIfNeeded: false)
         setUpStatusItem()
+
+        showMenuBarIcon = UserDefaults.standard.object(forKey: "showMenuBarIcon") as? Bool ?? true
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(menuBarVisibilityChanged(_:)),
+            name: .menuBarVisibilityChanged,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(showOnboardingFromSettings),
+            name: .showOnboarding,
+            object: nil
+        )
+        applyMenuBarVisibility(showMenuBarIcon, showSettingsIfHidden: true)
 
         wheel.onDrop = { [weak self] item, urls in
             Log.write("drop via draggingDestination \(item.id)")
@@ -93,6 +110,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.wheelDismissed = true
         }
 
+        wheel.onOpenSettings = { [weak self] in
+            Log.write("settings opened from wheel comma")
+            self?.showSettings()
+        }
+
         monitor.onChange = { [weak self] session in
             self?.updateWheel(for: session)
         }
@@ -102,6 +124,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             hud.show(title: "Converting to JPG", subtitle: "2 of 4 pages")
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 self.hud.succeed(title: "Converted to JPG", subtitle: "1 of 1 saved")
+            }
+        }
+
+        if CommandLine.arguments.contains("--hud-error-demo") {
+            hud.show(title: "Converting to JPG", subtitle: "2 of 4 pages")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                self.hud.fail("No permission to save there. Use “Grant Folder Access…” and try again.")
             }
         }
 
@@ -651,7 +680,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         guard item.id.hasPrefix("convert:") else {
-            NSSound.beep()
             Log.write("not implemented: \(item.id)")
             hud.fail("\(item.title) isn’t built yet")
             return
@@ -737,7 +765,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } catch {
                 hud.fail(error.friendlyMessage)
                 StatusIcon.setBusy(false, on: statusItem?.button)
-                NSSound.beep()
                 Log.write("job failed \(input.path): \(error.localizedDescription)")
                 return
             }
@@ -755,7 +782,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             title: "Converted to \(target.uppercased())",
             subtitle: "\(files.count) of \(files.count) saved"
         )
-        Sound.completion()
         Log.write("batch done \(outputs.map(\.path))")
     }
 
@@ -809,7 +835,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             title: "Copied",
             subtitle: urls.count == 1 ? urls[0].lastPathComponent : "\(urls.count) files on the clipboard"
         )
-        Sound.completion()
         Log.write("copied \(urls.count) file(s) to clipboard")
     }
 
@@ -836,11 +861,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Moved",
                     subtitle: outputs.isEmpty ? "Already in that folder" : "\(outputs.count) items"
                 )
-                Sound.completion()
                 Log.write("move done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("move failed: \(error.localizedDescription)")
             }
         }
@@ -1002,11 +1025,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }.value
                 self?.finished(outputs)
                 self?.hud.succeed(title: "Cropped PDF", subtitle: "All pages")
-                Sound.completion()
                 Log.write("pdf crop done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("pdf crop failed: \(error.localizedDescription)")
             }
         }
@@ -1031,11 +1052,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Created PDF",
                     subtitle: "\(images.count) pages"
                 )
-                Sound.completion()
                 Log.write("images to pdf done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("images to pdf failed: \(error.localizedDescription)")
             }
         }
@@ -1063,11 +1082,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Merged \(pdfs.count) PDFs",
                     subtitle: "\(outputs.count) file saved"
                 )
-                Sound.completion()
                 Log.write("merge done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("merge failed: \(error.localizedDescription)")
             }
         }
@@ -1138,11 +1155,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Redacted image",
                     subtitle: "\(spec.redactions.count) boxes blacked out"
                 )
-                Sound.completion()
                 Log.write("image redact done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("image redact failed: \(error.localizedDescription)")
             }
         }
@@ -1163,11 +1178,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Redacted PDF",
                     subtitle: "\(spec.redactions.count) areas · flattened"
                 )
-                Sound.completion()
                 Log.write("redact done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("redact failed: \(error.localizedDescription)")
             }
         }
@@ -1222,11 +1235,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Annotated image",
                     subtitle: "\(spec.annotations.count) marks"
                 )
-                Sound.completion()
                 Log.write("image annotate done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("image annotate failed: \(error.localizedDescription)")
             }
         }
@@ -1247,11 +1258,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Annotated PDF",
                     subtitle: "\(spec.annotations.count) marks"
                 )
-                Sound.completion()
                 Log.write("annotate done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("annotate failed: \(error.localizedDescription)")
             }
         }
@@ -1290,11 +1299,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Page order saved",
                     subtitle: "\(spec.pages.count) pages"
                 )
-                Sound.completion()
                 Log.write("organize done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("organize failed: \(error.localizedDescription)")
             }
         }
@@ -1315,11 +1322,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Split into \(outputs.count) parts",
                     subtitle: "Saved in a new folder"
                 )
-                Sound.completion()
                 Log.write("split done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("split failed: \(error.localizedDescription)")
             }
         }
@@ -1361,11 +1366,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }.value
                 self?.finished(outputs)
                 self?.hud.succeed(title: "Metadata removed", subtitle: "1 of 1 saved")
-                Sound.completion()
                 Log.write("metadata strip done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("metadata strip failed: \(error.localizedDescription)")
             }
         }
@@ -1399,11 +1402,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }.value
                 self?.finished(outputs)
                 self?.hud.succeed(title: "Edited image", subtitle: "1 of 1 saved")
-                Sound.completion()
                 Log.write("edit done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("edit failed: \(error.localizedDescription)")
             }
         }
@@ -1423,7 +1424,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             guard let self else { return }
             self.hud.hide()
-            if values.isEmpty { NSSound.beep() }
 
             let controller = QRResultWindowController(
                 values: values, source: input
@@ -1453,11 +1453,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Background removed",
                     subtitle: "Transparent PNG"
                 )
-                Sound.completion()
                 Log.write("remove bg done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("remove bg failed: \(error.localizedDescription)")
             }
         }
@@ -1499,11 +1497,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Collage",
                     subtitle: "\(images.count) images"
                 )
-                Sound.completion()
                 Log.write("collage done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("collage failed: \(error.localizedDescription)")
             }
         }
@@ -1557,11 +1553,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }.value
                 self?.finished(outputs)
                 self?.hud.succeed(title: "Framed PDF", subtitle: "All pages")
-                Sound.completion()
                 Log.write("pdf frame done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("pdf frame failed: \(error.localizedDescription)")
             }
         }
@@ -1579,11 +1573,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }.value
                 self?.finished(outputs)
                 self?.hud.succeed(title: "Framed image", subtitle: "1 of 1 saved")
-                Sound.completion()
                 Log.write("frame done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("frame failed: \(error.localizedDescription)")
             }
         }
@@ -1631,11 +1623,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }.value
                 self?.finished(outputs)
                 self?.announceCompression(input: input, outputs: outputs)
-                Sound.completion()
                 Log.write("pdf compress done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("pdf compress failed: \(error.localizedDescription)")
             }
         }
@@ -1654,11 +1644,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }.value
                 self?.finished(outputs)
                 self?.announceCompression(input: input, outputs: outputs)
-                Sound.completion()
                 Log.write("compress done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("compress failed: \(error.localizedDescription)")
             }
         }
@@ -1726,11 +1714,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }.value
                 self?.finished(outputs)
                 self?.hud.succeed(title: "\(spec.suffix) image", subtitle: "1 of 1 saved")
-                Sound.completion()
                 Log.write("adjust done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("adjust failed: \(error.localizedDescription)")
             }
         }
@@ -1754,11 +1740,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: "Batch crop",
                     subtitle: "\(outputs.count) images"
                 )
-                Sound.completion()
                 Log.write("batch crop done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("batch crop failed: \(error.localizedDescription)")
             }
         }
@@ -1788,11 +1772,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }.value
                 self?.finished(outputs)
                 self?.hud.succeed(title: "Cropped", subtitle: "1 of 1 saved")
-                Sound.completion()
                 Log.write("crop done \(outputs.map(\.path))")
             } catch {
                 self?.hud.fail(error.friendlyMessage)
-                NSSound.beep()
                 Log.write("crop failed: \(error.localizedDescription)")
             }
         }
@@ -1825,9 +1807,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         FolderAccess.shared.prompt()
     }
 
+    @objc private func menuBarVisibilityChanged(_ note: Notification) {
+        let visible = note.object as? Bool ?? true
+        applyMenuBarVisibility(visible, showSettingsIfHidden: false)
+    }
+
+    @objc private func showOnboardingFromSettings() {
+        showOnboarding(page: 0)
+    }
+
+    private func applyMenuBarVisibility(_ visible: Bool, showSettingsIfHidden: Bool) {
+        Log.write("menu bar icon visible=\(visible)")
+        showMenuBarIcon = visible
+        statusItem?.isVisible = visible
+        if visible {
+            NSApp.setActivationPolicy(.accessory)
+        } else {
+            NSApp.setActivationPolicy(.regular)
+            if showSettingsIfHidden {
+                showSettings()
+            }
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !showMenuBarIcon {
+            showSettings()
+        }
+        return true
+    }
+
     @objc private func revealLast() {
         guard !lastOutputs.isEmpty else {
-            NSSound.beep()
             return
         }
         NSWorkspace.shared.activateFileViewerSelecting(lastOutputs)

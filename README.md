@@ -101,7 +101,7 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
   * <kbd>Return</kbd>: Executes hovered tool.
   * <kbd>Esc</kbd>: Dismisses the wheel.
   * *Prevents accidental drops*: When activated via keyboard, the panel stays locked to absorb Finder’s pending mouse-up.
-* **Tactile Haptic Feedback**: Alignment haptic ticks when your pointer crosses between wedges.
+* **Tactile Feedback**: A soft 60 ms hover tick plus alignment haptics; separate sound and haptics toggles. The wheel blooms in 0.2 s and crossfades the hovered wedge to `#FF5200`.
 * **Centre Thumbnail & Size Pill**: Shows an instant visual preview of dragged contents, file sizes, and item counts.
 * **Non-Activating Floating Panel**: Never steals frontmost focus or interrupts your active workspace.
 * **Atomic Writes & Collision Protection**: Writes via temporary files (`.<UUID>.tmp`) before swapping. Automatically uses smart collision naming (`sample 2.jpg`) so your original files are never overwritten.

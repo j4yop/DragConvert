@@ -226,6 +226,10 @@ struct OnboardingView: View {
             Text("GPL-3.0 licensed · everything runs on this Mac")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.55))
+
+            Text("Press  ,  while the wheel is open for Settings.")
+                .font(.system(size: 10))
+                .foregroundStyle(.white.opacity(0.55))
         }
     }
 }
@@ -247,7 +251,7 @@ private struct KeycapView: View {
     }
 }
 
-private struct WheelGraphic: View {
+struct WheelGraphic: View {
     let labels: [String]
     let highlighted: Int
 
@@ -323,7 +327,7 @@ private struct WheelGraphic: View {
     }
 }
 
-private struct WedgeShape: Shape {
+struct WedgeShape: Shape {
     let index: Int
     let count: Int
     let innerRatio: CGFloat

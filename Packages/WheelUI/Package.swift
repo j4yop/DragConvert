@@ -12,7 +12,8 @@ let package = Package(
         .target(
             name: "WheelUI",
             dependencies: [.product(name: "CapabilityGraph", package: "CapabilityGraph")],
-            path: "Sources/WheelUI"
+            path: "Sources/WheelUI",
+            resources: [.process("Resources")]
         )
     ]
 )
