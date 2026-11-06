@@ -16,25 +16,39 @@ public struct WheelPreview {
     }
 }
 
+/// The two wheel materials exposed in Settings.
+public enum WheelStyle: String, CaseIterable, Identifiable, Sendable {
+    case glass
+    case solid
+
+    public var id: String { rawValue }
+    public var title: String { self == .glass ? "Glass" : "Solid" }
+
+    public static var current: WheelStyle {
+        WheelStyle(rawValue: UserDefaults.standard.string(forKey: "wheelStyle") ?? "") ?? .glass
+    }
+}
+
 public final class WheelPanel: NSPanel {
     private let glass = NSVisualEffectView()
     private let container = NSView()
+    public private(set) var style: WheelStyle = .glass
 
-    public init(size: CGFloat = 420) {
-        container.frame = NSRect(x: 0, y: 0, width: size, height: size)
+    public init(width: CGFloat = 300, height: CGFloat = 300) {
+        container.frame = NSRect(x: 0, y: 0, width: width, height: height)
         container.wantsLayer = true
 
         glass.frame = container.bounds
         glass.autoresizingMask = [.width, .height]
-        glass.material = .popover
+        glass.material = .hudWindow
         glass.blendingMode = .behindWindow
         glass.state = .active
-        glass.appearance = NSAppearance(named: .aqua)
-        glass.maskImage = Self.ringMask(size: size)
+        glass.appearance = NSAppearance(named: .darkAqua)
+        glass.maskImage = Self.ringMask(size: container.bounds.size)
         container.addSubview(glass)
 
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: size, height: size),
+            contentRect: container.bounds,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -42,7 +56,7 @@ public final class WheelPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
-        level = .popUpMenu
+        level = .screenSaver
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         ignoresMouseEvents = false
         isMovableByWindowBackground = false
@@ -61,15 +75,37 @@ public final class WheelPanel: NSPanel {
         container.addSubview(view)
     }
 
+    public func setStyle(_ style: WheelStyle) {
+        self.style = style
+        glass.isHidden = style == .solid
+        glass.material = .hudWindow
+        glass.appearance = NSAppearance(named: .darkAqua)
+    }
+
     public func setGlassProgress(_ progress: CGFloat) {
+        guard style == .glass else {
+            glass.alphaValue = 0
+            return
+        }
         let t = min(max(progress, 0), 1)
         glass.alphaValue = max(0, min(1, (t - 0.15) / 0.85))
     }
 
-    private static func ringMask(size: CGFloat) -> NSImage {
-        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
-            let outer = NSBezierPath(ovalIn: rect.insetBy(dx: 14, dy: 14))
-            let inner = NSBezierPath(ovalIn: rect.insetBy(dx: 146, dy: 146))
+    private static func ringMask(size: NSSize) -> NSImage {
+        let image = NSImage(size: size, flipped: false) { rect in
+            let center = NSPoint(x: rect.midX, y: rect.midY)
+            let outer = NSBezierPath(
+                ovalIn: NSRect(
+                    x: center.x - 132, y: center.y - 132,
+                    width: 264, height: 264
+                )
+            )
+            let inner = NSBezierPath(
+                ovalIn: NSRect(
+                    x: center.x - 118, y: center.y - 118,
+                    width: 236, height: 236
+                )
+            )
             let ring = NSBezierPath()
             ring.append(outer)
             ring.append(inner)
@@ -107,6 +143,9 @@ public final class WheelView: NSView {
     /// instead of asking the window server for a blur.
     public var glassEnabled: Bool = true
 
+    /// Glass or Solid. The renderer uses exactly the same geometry for both.
+    public var style: WheelStyle = .glass { didSet { needsDisplay = true } }
+
     public private(set) var hoveredIndex: Int?
     private var hoverLevels: [CGFloat] = []
     private var hoverTimer: Timer?
@@ -130,21 +169,24 @@ public final class WheelView: NSView {
 
     // MARK: Geometry
 
-    private var outerRadius: CGFloat { min(bounds.width, bounds.height) / 2 - 30 }
-    private var innerRadius: CGFloat { outerRadius * 0.405 }
+    /// The dial is a single square overlay: the drag preview floats over its
+    /// centre, exactly like the reference.
+    private var wheelCenter: NSPoint { NSPoint(x: bounds.midX, y: bounds.midY) }
+    private var outerRadius: CGFloat { min(bounds.width / 2 - 32, 118) }
+    private var innerRadius: CGFloat { 50 }
 
     private func wedgeAngles(_ index: Int, count: Int) -> (start: CGFloat, end: CGFloat) {
         let step = 360.0 / CGFloat(count)
         let center = 90.0 - step * CGFloat(index)
-        let gap: CGFloat = count > 8 ? 0.48 : 0.62
+        let gap: CGFloat = count > 8 ? 0.7 : 1.35
         return (center - step / 2 + gap, center + step / 2 - gap)
     }
 
     private func point(radius: CGFloat, angle: CGFloat) -> NSPoint {
         let radians = angle * .pi / 180
         return NSPoint(
-            x: bounds.midX + cos(radians) * radius,
-            y: bounds.midY + sin(radians) * radius
+            x: wheelCenter.x + cos(radians) * radius,
+            y: wheelCenter.y + sin(radians) * radius
         )
     }
 
@@ -154,7 +196,7 @@ public final class WheelView: NSView {
         let (a0, a1) = wedgeAngles(index, count: count)
         let outer = outerRadius
         let inner = innerRadius
-        let outerCorner = max(4, min(12, (outer - inner) * 0.12))
+        let outerCorner = max(4, min(10, (outer - inner) * 0.10))
         let innerCorner = max(3, min(outerCorner, inner * 0.10))
 
         let dOuter = asin(min(0.9, outerCorner / max(1, outer - outerCorner))) * 180 / .pi
@@ -166,7 +208,7 @@ public final class WheelView: NSView {
         let path = NSBezierPath()
         path.move(to: point(radius: outer, angle: a0 + dOuter))
         path.appendArc(
-            withCenter: NSPoint(x: bounds.midX, y: bounds.midY),
+            withCenter: wheelCenter,
             radius: outer,
             startAngle: a0 + dOuter,
             endAngle: a1 - dOuter,
@@ -184,7 +226,7 @@ public final class WheelView: NSView {
             controlPoint2: point(radius: inner, angle: a1)
         )
         path.appendArc(
-            withCenter: NSPoint(x: bounds.midX, y: bounds.midY),
+            withCenter: wheelCenter,
             radius: inner,
             startAngle: a1 - dInner,
             endAngle: a0 + dInner,
@@ -207,7 +249,7 @@ public final class WheelView: NSView {
 
     public func index(at point: NSPoint) -> Int? {
         guard !items.isEmpty else { return nil }
-        let c = NSPoint(x: bounds.midX, y: bounds.midY)
+        let c = wheelCenter
         let dx = point.x - c.x, dy = point.y - c.y
         let radius = sqrt(dx * dx + dy * dy)
         guard radius >= innerRadius, radius <= outerRadius else { return nil }
@@ -326,9 +368,9 @@ public final class WheelView: NSView {
         NSGraphicsContext.saveGraphicsState()
         let scale = 0.86 + 0.14 * min(max(appearProgress, 0), 1)
         let transform = NSAffineTransform()
-        transform.translateX(by: bounds.midX, yBy: bounds.midY)
+        transform.translateX(by: wheelCenter.x, yBy: wheelCenter.y)
         transform.scale(by: scale)
-        transform.translateX(by: -bounds.midX, yBy: -bounds.midY)
+        transform.translateX(by: -wheelCenter.x, yBy: -wheelCenter.y)
         transform.concat()
 
         drawBackdrop()
@@ -339,16 +381,16 @@ public final class WheelView: NSView {
     }
 
     private func drawBackdrop() {
-        let center = NSPoint(x: bounds.midX, y: bounds.midY)
-        let radius = outerRadius + 13
+        let center = wheelCenter
+        let radius = outerRadius + 14
         let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
-        let useGlass = glassEnabled && !reduceTransparency
+        let useGlass = style == .glass && glassEnabled && !reduceTransparency
 
         NSGraphicsContext.saveGraphicsState()
         let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(useGlass ? 0.20 : 0.30)
-        shadow.shadowBlurRadius = useGlass ? 16 : 18
-        shadow.shadowOffset = NSSize(width: 0, height: -4)
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.60)
+        shadow.shadowBlurRadius = 22
+        shadow.shadowOffset = NSSize(width: 0, height: -6)
         shadow.set()
 
         let backdrop = NSBezierPath(
@@ -358,86 +400,89 @@ public final class WheelView: NSView {
             )
         )
         if useGlass {
-            NSColor(srgbRed: 1.0, green: 0.96, blue: 0.91, alpha: 0.10).setFill()
+            NSColor(white: 0.012, alpha: 0.93).setFill()
             backdrop.fill()
         } else {
             NSGradient(
-                starting: NSColor(srgbRed: 0.97, green: 0.94, blue: 0.90, alpha: 0.98),
-                ending: NSColor(srgbRed: 0.89, green: 0.84, blue: 0.79, alpha: 0.97)
+                starting: NSColor(white: 0.115, alpha: 0.985),
+                ending: NSColor(white: 0.045, alpha: 0.995)
             )?.draw(in: backdrop, angle: -90)
         }
         NSGraphicsContext.restoreGraphicsState()
 
-        NSColor.white.withAlphaComponent(useGlass ? 0.32 : 0.42).setStroke()
+        NSColor.white.withAlphaComponent(useGlass ? 0.065 : 0.075).setStroke()
         backdrop.lineWidth = 1
         backdrop.stroke()
 
+        // Soft specular arc at the top of the glass rim.
         let specular = NSBezierPath()
         specular.appendArc(
             withCenter: center,
-            radius: radius - 1,
-            startAngle: 102,
+            radius: radius - 1.5,
+            startAngle: 104,
             endAngle: 168,
             clockwise: false
         )
-        NSColor.white.withAlphaComponent(0.34).setStroke()
-        specular.lineWidth = 1.6
+        NSColor.white.withAlphaComponent(useGlass ? 0.30 : 0.10).setStroke()
+        specular.lineWidth = 1.8
         specular.stroke()
     }
 
     private func drawPetals() {
         let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
-        let glassGradient = NSGradient(
-            colorsAndLocations:
-                (NSColor(srgbRed: 1.0, green: 1.0, blue: 1.0, alpha: 0.82), 0.0),
-                (NSColor(srgbRed: 0.96, green: 0.97, blue: 0.96, alpha: 0.58), 0.68),
-                (NSColor(srgbRed: 0.96, green: 0.96, blue: 0.95, alpha: 0.76), 1.0)
-        )
+        let useGlass = style == .glass && glassEnabled && !reduceTransparency
+        let baseGradient: NSGradient?
+        if useGlass {
+            baseGradient = NSGradient(
+                colorsAndLocations:
+                    (NSColor(white: 0.205, alpha: 0.94), 0.0),
+                    (NSColor(white: 0.105, alpha: 0.95), 0.55),
+                    (NSColor(white: 0.065, alpha: 0.96), 1.0)
+            )
+        } else {
+            baseGradient = NSGradient(
+                colorsAndLocations:
+                    (NSColor(white: 0.19, alpha: 1.0), 0.0),
+                    (NSColor(white: 0.155, alpha: 1.0), 0.62),
+                    (NSColor(white: 0.125, alpha: 1.0), 1.0)
+            )
+        }
 
         for i in items.indices {
             let path = roundedWedgePath(i, count: items.count)
             let level = hoverLevels.indices.contains(i) ? hoverLevels[i] : 0
 
-            if reduceTransparency {
-                NSColor(srgbRed: 1.0, green: 0.97, blue: 0.93, alpha: 0.96).setFill()
-                path.fill()
-            } else {
-                glassGradient?.draw(in: path, relativeCenterPosition: .zero)
-            }
+            baseGradient?.draw(in: path, angle: -90)
 
             if level > 0.002 {
-                accent.withAlphaComponent(level).setFill()
-                path.fill()
+                if style == .solid {
+                    NSColor(white: 0.84, alpha: level).setFill()
+                    path.fill()
+                    NSColor.white.withAlphaComponent(0.30 * level).setStroke()
+                    path.lineWidth = 1
+                    path.stroke()
+                } else {
+                    accent.withAlphaComponent(level).setFill()
+                    path.fill()
+                    NSColor.white.withAlphaComponent(0.16 * level).setStroke()
+                    path.lineWidth = 0.9
+                    path.stroke()
+                }
             }
 
-            let stroke = NSColor(
-                srgbRed: 0.36 + 0.40 * level,
-                green: 0.40 - 0.15 * level,
-                blue: 0.40 - 0.30 * level,
-                alpha: 0.20 + 0.24 * level
-            )
-            stroke.setStroke()
-            path.lineWidth = 0.8 + 0.4 * level
-            path.stroke()
-
-            if level > 0.01 {
-                let (a0, a1) = wedgeAngles(i, count: items.count)
-                let ring = NSBezierPath()
-                ring.appendArc(
-                    withCenter: NSPoint(x: bounds.midX, y: bounds.midY),
-                    radius: innerRadius + 1.5,
-                    startAngle: a0 + 1.2,
-                    endAngle: a1 - 1.2,
-                    clockwise: false
-                )
-                ring.lineWidth = 1.4
-                NSColor.white.withAlphaComponent(0.68 * level).setStroke()
-                ring.stroke()
+            if level < 0.5 {
+                NSColor.white.withAlphaComponent(useGlass ? 0.105 : 0.055).setStroke()
+                path.lineWidth = 0.8
+                path.stroke()
+            } else {
+                NSColor.black.withAlphaComponent(style == .solid ? 0.16 : 0.0).setStroke()
+                path.lineWidth = 0.8
+                path.stroke()
             }
 
             if i == confirmIndex {
-                NSColor.white.withAlphaComponent(0.85).setStroke()
-                path.lineWidth = 2.1
+                NSColor.white.withAlphaComponent(0.92).setStroke()
+                path.lineWidth = 2
                 path.stroke()
             }
 
@@ -445,115 +490,101 @@ public final class WheelView: NSView {
             let mid = (a0 + a1) / 2 * .pi / 180
             let labelRadius = (innerRadius + outerRadius) / 2
             let p = NSPoint(
-                x: bounds.midX + cos(mid) * labelRadius,
-                y: bounds.midY + sin(mid) * labelRadius
+                x: wheelCenter.x + cos(mid) * labelRadius,
+                y: wheelCenter.y + sin(mid) * labelRadius
             )
-            let brightness = 0.10 + 0.90 * level
+            let labelWhite: CGFloat = style == .solid ? (0.95 - 0.83 * level) : 0.94
             draw(
                 item: items[i],
                 at: p,
-                color: NSColor(calibratedWhite: brightness, alpha: 0.90),
+                color: NSColor(white: labelWhite, alpha: 0.96),
                 compact: items.count > 8
             )
         }
     }
 
     private func drawCentre() {
-        let center = NSPoint(x: bounds.midX, y: bounds.midY)
-        let well = NSRect(
-            x: center.x - innerRadius, y: center.y - innerRadius,
-            width: innerRadius * 2, height: innerRadius * 2
+        let center = wheelCenter
+        let plateSize: CGFloat = 92
+        let plateRect = NSRect(
+            x: center.x - plateSize / 2,
+            y: center.y - plateSize / 2,
+            width: plateSize,
+            height: plateSize
         )
-
-        let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
-        NSColor(
-            srgbRed: 0.99,
-            green: 0.91,
-            blue: 0.84,
-            alpha: reduceTransparency ? 0.96 : 0.64
-        ).setFill()
-        NSBezierPath(ovalIn: well).fill()
-        NSColor.white.withAlphaComponent(0.36).setStroke()
-        let ring = NSBezierPath(ovalIn: well.insetBy(dx: 1, dy: 1))
-        ring.lineWidth = 1
-        ring.stroke()
-
-        guard let preview else {
-            drawPlaceholder(in: well)
-            return
-        }
-
-        let thumbSize: CGFloat = 68
-        let thumbRect = NSRect(
-            x: center.x - thumbSize / 2,
-            y: center.y - thumbSize / 2 + 8,
-            width: thumbSize,
-            height: thumbSize
+        let plate = NSBezierPath(
+            roundedRect: plateRect,
+            xRadius: 20,
+            yRadius: 20
         )
+        NSColor(white: 0.035, alpha: style == .solid ? 1 : 0.90).setFill()
+        plate.fill()
+        NSColor.white.withAlphaComponent(0.10).setStroke()
+        plate.lineWidth = 1
+        plate.stroke()
 
-        if preview.isMultiple {
-            let behind = thumbRect.offsetBy(dx: -5, dy: 5)
-            NSColor.white.withAlphaComponent(0.42).setFill()
-            NSBezierPath(roundedRect: behind, xRadius: 16, yRadius: 16).fill()
-        }
+        let title = hoveredItem?.title ?? preview?.fileSize ?? "DRAG"
+        let font = labelFont(size: title.count > 9 ? 9.2 : (title.count > 6 ? 11.2 : 13), weight: .semibold)
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.white,
+            .kern: 0.2
+        ]
+        let textSize = (title as NSString).size(withAttributes: attributes)
+        let capWidth = min(plateSize - 10, max(58, textSize.width + 26))
+        let capRect = NSRect(
+            x: center.x - capWidth / 2,
+            y: center.y - 14,
+            width: capWidth,
+            height: 28
+        )
+        let cap = NSBezierPath(roundedRect: capRect, xRadius: 9.5, yRadius: 9.5)
 
-        if let image = preview.image {
-            drawImageFilled(image, in: thumbRect, cornerRadius: 16)
+        if style == .solid {
+            NSColor(white: 0.015, alpha: 1).setFill()
+            cap.fill()
+            NSColor.white.withAlphaComponent(0.82).setStroke()
+            cap.lineWidth = 1
+            cap.stroke()
+
+            // The solid reference shows the neighbouring capsule edges.
+            for offset in [-(capWidth / 2 + 9), capWidth / 2 + 3] {
+                let peek = NSRect(
+                    x: center.x + offset,
+                    y: center.y - 10,
+                    width: 5,
+                    height: 20
+                )
+                NSColor.white.withAlphaComponent(0.62).setStroke()
+                let peekPath = NSBezierPath(roundedRect: peek, xRadius: 3, yRadius: 3)
+                peekPath.lineWidth = 1
+                peekPath.stroke()
+            }
+        } else if hoveredIndex == nil {
+            NSColor(white: 0.70, alpha: 1).setFill()
+            cap.fill()
+            NSColor.white.withAlphaComponent(0.20).setStroke()
+            cap.lineWidth = 1
+            cap.stroke()
         } else {
-            NSColor.white.withAlphaComponent(0.76).setFill()
-            NSBezierPath(roundedRect: thumbRect, xRadius: 16, yRadius: 16).fill()
-            drawSymbol("doc.fill", in: thumbRect.insetBy(dx: 18, dy: 18), color: accent)
+            NSColor(white: 0.045, alpha: 0.97).setFill()
+            cap.fill()
+            NSColor.white.withAlphaComponent(0.14).setStroke()
+            cap.lineWidth = 1
+            cap.stroke()
         }
 
-        NSColor.white.withAlphaComponent(0.62).setStroke()
-        let outline = NSBezierPath(roundedRect: thumbRect, xRadius: 16, yRadius: 16)
-        outline.lineWidth = 1.4
-        outline.stroke()
-
-        let pillText = preview.fileSize
-        let pillFont = labelFont(size: 10.5, weight: .semibold)
-        let pillAttributes: [NSAttributedString.Key: Any] = [
-            .font: pillFont,
-            .foregroundColor: NSColor.black.withAlphaComponent(0.78)
-        ]
-        let pillSize = (pillText as NSString).size(withAttributes: pillAttributes)
-        let pillRect = NSRect(
-            x: center.x - pillSize.width / 2 - 9,
-            y: thumbRect.minY - 7,
-            width: pillSize.width + 18,
-            height: 18
+        var textAttributes = attributes
+        if style == .glass && hoveredIndex == nil {
+            textAttributes[.foregroundColor] = NSColor(white: 0.08, alpha: 1)
+        }
+        (title as NSString).draw(
+            at: NSPoint(
+                x: center.x - textSize.width / 2,
+                y: center.y - textSize.height / 2
+            ),
+            withAttributes: textAttributes
         )
-        NSColor.white.withAlphaComponent(0.92).setFill()
-        NSBezierPath(roundedRect: pillRect, xRadius: 9, yRadius: 9).fill()
-        (pillText as NSString).draw(
-            at: NSPoint(x: pillRect.midX - pillSize.width / 2, y: pillRect.midY - pillSize.height / 2),
-            withAttributes: pillAttributes
-        )
-
-        let nameFont = labelFont(size: 9.5, weight: .medium)
-        let style = NSMutableParagraphStyle()
-        style.alignment = .center
-        style.lineBreakMode = .byTruncatingMiddle
-        let nameAttributes: [NSAttributedString.Key: Any] = [
-            .font: nameFont,
-            .foregroundColor: NSColor.black.withAlphaComponent(0.70),
-            .paragraphStyle: style
-        ]
-        let nameRect = NSRect(
-            x: center.x - innerRadius * 0.79,
-            y: pillRect.minY - 15,
-            width: innerRadius * 1.58,
-            height: 12
-        )
-        (preview.fileName as NSString).draw(in: nameRect, withAttributes: nameAttributes)
-    }
-
-    private func drawPlaceholder(in well: NSRect) {
-        let symbol = NSRect(
-            x: well.midX - 20, y: well.midY - 12,
-            width: 40, height: 40
-        )
-        drawSymbol("doc.fill", in: symbol, color: accent)
     }
 
     private func drawImageFilled(_ image: NSImage, in rect: NSRect, cornerRadius: CGFloat) {
@@ -595,7 +626,7 @@ public final class WheelView: NSView {
     }
 
     private func draw(item: WheelItem, at p: NSPoint, color: NSColor, compact: Bool) {
-        let font = labelFont(size: compact ? 10.5 : 13, weight: .semibold)
+        let font = labelFont(size: compact ? 10.2 : 12.5, weight: .semibold)
         let text = item.title as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -607,7 +638,7 @@ public final class WheelView: NSView {
 
         if !item.symbol.isEmpty,
            let base = NSImage(systemSymbolName: item.symbol, accessibilityDescription: nil) {
-            let cfg = NSImage.SymbolConfiguration(pointSize: compact ? 12 : 15, weight: .semibold)
+            let cfg = NSImage.SymbolConfiguration(pointSize: compact ? 11 : 13, weight: .semibold)
             if let symbol = base.withSymbolConfiguration(cfg) {
                 let tinted = tint(symbol, color: color)
                 let s = symbol.size
@@ -647,14 +678,14 @@ public final class WheelController {
     public var onCancel: (() -> Void)?
     public var onOpenSettings: (() -> Void)?
 
-    private let panel = WheelPanel()
+    private let panel = WheelPanel(width: 300, height: 300)
     private var keyMonitor: Any?
     private let wheel: WheelView
     private var isShown = false
     private var appearTimer: Timer?
 
     public init() {
-        wheel = WheelView(frame: NSRect(x: 0, y: 0, width: 420, height: 420))
+        wheel = WheelView(frame: NSRect(x: 0, y: 0, width: 300, height: 300))
         wheel.glassEnabled = !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
         panel.addWheel(wheel)
         wheel.onDrop = { [weak self] item, urls in
@@ -679,6 +710,9 @@ public final class WheelController {
         wheel.items = items
         wheel.preview = preview
         wheel.locked = false
+        let style = WheelStyle.current
+        wheel.style = style
+        panel.setStyle(style)
 
         if !isShown {
             move(to: point)
@@ -714,6 +748,8 @@ public final class WheelController {
         wheel.highlight(index)
     }
 
+    /// The dial blooms around the drag point. Finder's drag preview floats
+    /// over it, so the ring stays where the pointer is.
     public func move(to point: CGPoint) {
         let size = panel.frame.size
         let screen = NSScreen.screens.first { $0.frame.contains(point) } ?? NSScreen.main
@@ -723,6 +759,16 @@ public final class WheelController {
         x = min(max(x, visible.minX), visible.maxX - size.width)
         y = min(max(y, visible.minY), visible.maxY - size.height)
         panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    /// Keyboard activation absorbs Finder's pending mouse-up by putting the
+    /// panel directly under the pointer.
+    private func moveToAbsorb(_ point: CGPoint) {
+        let size = panel.frame.size
+        panel.setFrameOrigin(NSPoint(
+            x: point.x - size.width / 2,
+            y: point.y - size.height / 2
+        ))
     }
 
     public func hide() {
@@ -826,7 +872,7 @@ public final class WheelController {
         Feedback.shared.select()
         // Keep the panel under the pointer so Finder's pending drop is
         // absorbed by it instead of landing on whatever is behind.
-        move(to: NSEvent.mouseLocation)
+        moveToAbsorb(NSEvent.mouseLocation)
         onActivate?(item)
     }
 }

@@ -43,6 +43,10 @@ struct DragConvertApp {
             engine = (target == "txt" || target == "md") ? PDFTextEngine() : PDFToImageEngine()
         case .image:
             engine = ImageConvertEngine()
+        case .subtitle:
+            engine = SubtitleEngine()
+        case .archive:
+            engine = ArchiveEngine()
         default:
             engine = nil
         }

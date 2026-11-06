@@ -12,6 +12,8 @@ final class FolderAccess {
     private var activeURL: URL?
 
     var isGranted: Bool { activeURL != nil }
+    var currentPath: String? { activeURL?.path }
+    var currentName: String? { activeURL?.lastPathComponent }
 
     @discardableResult
     func ensureAccess(promptIfNeeded: Bool = true) -> Bool {
@@ -28,9 +30,9 @@ final class FolderAccess {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = false
-        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
-        panel.message = "Allow access to your home folder so results can be saved next to the originals."
-        panel.prompt = "Allow"
+        panel.directoryURL = activeURL ?? FileManager.default.homeDirectoryForCurrentUser
+        panel.message = "Choose a folder DragConvert can read and write. Results are saved beside the original files."
+        panel.prompt = "Allow Folder"
 
         guard panel.runModal() == .OK, let url = panel.url else { return false }
         store(url)

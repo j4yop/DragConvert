@@ -398,6 +398,91 @@ public struct ImageAnnotateSpec: Equatable, Sendable {
     }
 }
 
+
+/// User-facing conversion defaults shared by the app and the image encoders.
+public enum ConversionDefaults {
+    public static func quality(for ext: String, fallback: Double) -> Double {
+        let id = normalised(ext)
+        var value = fallback
+        if let raw = UserDefaults.standard.string(forKey: "conversionProfile.\(id).quality") {
+            switch raw {
+            case "smallerFile": value = 0.65
+            case "balanced": value = 0.82
+            case "higherQuality": value = 0.95
+            default: break
+            }
+        } else if let raw = UserDefaults.standard.string(forKey: "formatQuality.\(id)") {
+            switch raw {
+            case "best": value = 0.95
+            case "high": value = 0.88
+            case "medium": value = 0.75
+            case "low": value = 0.60
+            default: break
+            }
+        }
+        if UserDefaults.standard.string(forKey: "conversionProfile.\(id).imageCompressionStrength") == "strong" {
+            value = max(0.35, value * 0.72)
+        }
+        return min(max(value, 0.05), 1.0)
+    }
+
+    public static func preservesMetadata(for ext: String) -> Bool {
+        let id = normalised(ext)
+        if let value = UserDefaults.standard.object(forKey: "conversionProfile.\(id).preserveMetadata") as? Bool {
+            return value
+        }
+        return UserDefaults.standard.object(forKey: "formatPreserve.\(id)") as? Bool ?? true
+    }
+
+    /// Long edge after the Image size setting. `nil` means keep the source.
+    public static func targetLongEdge(for ext: String, sourceLongEdge: Int) -> Int? {
+        let id = normalised(ext)
+        guard let raw = UserDefaults.standard.string(forKey: "conversionProfile.\(id).imageSize"),
+              raw != "original" else {
+            return nil
+        }
+        switch raw {
+        case "50": return max(32, sourceLongEdge / 2)
+        case "25": return max(32, sourceLongEdge / 4)
+        default: return Int(raw)
+        }
+    }
+
+    public static func audioBitrate(for ext: String) -> String {
+        UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).audioBitrate") ?? "256 kbps"
+    }
+
+    public static func audioDepth(for ext: String) -> String {
+        UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).audioSampleDepth") ?? "matchSource"
+    }
+
+    public static func videoMaxHeight(for ext: String) -> Int? {
+        let raw = UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).videoMaxHeight") ?? "original"
+        return raw == "original" ? nil : Int(raw)
+    }
+
+    public static func videoQuality(for ext: String) -> String {
+        UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).videoQuality") ?? "balanced"
+    }
+
+    public static func videoCompression(for ext: String) -> String {
+        UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).videoCompressionStrength") ?? "balanced"
+    }
+
+    public static func archiveCompression(for ext: String) -> String {
+        UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).compression") ?? "balanced"
+    }
+
+    private static func normalised(_ ext: String) -> String {
+        switch ext.lowercased() {
+        case "jpeg": return "jpg"
+        case "tif": return "tiff"
+        case "heif": return "heic"
+        default: return ext.lowercased()
+        }
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)

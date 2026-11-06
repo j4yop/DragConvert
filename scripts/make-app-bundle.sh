@@ -28,6 +28,18 @@ cp "$ROOT/Config/AppIcon.icns" "$BUNDLE/Contents/Resources/AppIcon.icns"
 cp "$ROOT/Config/PrivacyInfo.xcprivacy" "$BUNDLE/Contents/Resources/PrivacyInfo.xcprivacy"
 cp "$ROOT/LICENSE" "$BUNDLE/Contents/Resources/LICENSE"
 
+# Bundled helper tools (WebP encoder and its libraries). Sign each nested
+# binary before signing the app so the sandbox can execute it.
+if [[ -d "$ROOT/Tools" ]]; then
+  mkdir -p "$BUNDLE/Contents/Resources/Tools"
+  cp -R "$ROOT/Tools/." "$BUNDLE/Contents/Resources/Tools/"
+  chmod +x "$BUNDLE/Contents/Resources/Tools/cwebp"
+  for tool in "$BUNDLE/Contents/Resources/Tools/cwebp" "$BUNDLE/Contents/Resources/Tools/"*.dylib; do
+    [[ -f "$tool" ]] || continue
+    codesign --force --sign - "$tool" >/dev/null 2>&1
+  done
+fi
+
 codesign --force --sign - \
   --entitlements "$ROOT/Config/DragConvert.entitlements" \
   "$BUNDLE"
