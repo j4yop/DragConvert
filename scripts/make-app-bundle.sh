@@ -3,7 +3,13 @@ set -euo pipefail
 
 APP_NAME="DragConvert"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN_PATH="$(swift build --show-bin-path)"
+CONFIG="${CONFIG:-debug}"
+ARCH_ARGS=()
+if [[ "${UNIVERSAL:-0}" == "1" ]]; then
+  ARCH_ARGS=(--arch arm64 --arch x86_64)
+fi
+swift build -c "$CONFIG" "${ARCH_ARGS[@]}"
+BIN_PATH="$(swift build -c "$CONFIG" "${ARCH_ARGS[@]}" --show-bin-path)"
 BUILD_BIN="$BIN_PATH/$APP_NAME"
 BUNDLE="$ROOT/build/$APP_NAME.app"
 
@@ -49,3 +55,4 @@ codesign --force --sign - \
 touch "$ROOT/build/.metadata_never_index"
 
 echo "Built and ad-hoc signed: $BUNDLE"
+lipo -info "$BUNDLE/Contents/MacOS/$APP_NAME"

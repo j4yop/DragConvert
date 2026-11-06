@@ -18,6 +18,29 @@ This copies the signed bundle to `/Applications/DragConvert.app`, registers it
 with LaunchServices, imports it into Spotlight, and removes the development
 bundle so search shows one copy with the wheel icon.
 
+## Universal DMG
+
+```bash
+make dmg
+```
+
+`make dmg` builds the release binary for both **arm64 and x86_64**, creates
+`build/DragConvert-<version>.dmg`, adds an `/Applications` shortcut, a Read Me
+and a quarantine-fix command, then signs the DMG ad-hoc. Verify it with:
+
+```bash
+hdiutil attach -nobrowse -readonly build/DragConvert-<version>.dmg
+lipo -info "/Volumes/DragConvert <version>/DragConvert.app/Contents/MacOS/DragConvert"
+codesign --verify --deep --strict "/Volumes/DragConvert <version>/DragConvert.app"
+hdiutil detach "/Volumes/DragConvert <version>"
+```
+
+The app is universal but still ad-hoc signed. Without a Developer ID
+certificate, Gatekeeper will not accept it on first launch. The DMG includes
+the exact `xattr` fix, and the Homebrew cask clears quarantine automatically.
+When a Developer ID and notary credentials are available, run `make notarize`
+and replace the ad-hoc DMG.
+
 ## Homebrew release
 
 The public tap is `j4yop/homebrew-tap` and the cask is `Casks/dragconvert.rb`.

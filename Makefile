@@ -2,7 +2,7 @@ APP_NAME := DragConvert
 BUNDLE   := build/$(APP_NAME).app
 LOG      := $(HOME)/Library/Containers/com.dragconvert.app/Data/Library/Logs/dragconvert.log
 
-.PHONY: help build test run bundle install sign generate open clean convert log notarize icon
+.PHONY: help build test run bundle universal dmg install sign generate open clean convert log notarize icon
 
 help:
 	@echo "make build      Build the SwiftPM package"
@@ -13,6 +13,8 @@ help:
 	@echo "make open       Open the Xcode project (needs xcodegen)"
 	@echo "make convert file=<path> to=<ext>"
 	@echo "make icon       Regenerate the app icon"
+	@echo "make universal Build a universal arm64+x86_64 release bundle"
+	@echo "make dmg       Build the universal app and a signed DMG"
 	@echo "make notarize   Sign + notarize a Developer ID build"
 	@echo "make clean      Remove build artefacts"
 
@@ -25,6 +27,14 @@ test:
 bundle: build
 	@chmod +x scripts/make-app-bundle.sh
 	@./scripts/make-app-bundle.sh
+
+universal:
+	@chmod +x scripts/make-app-bundle.sh
+	@CONFIG=release UNIVERSAL=1 ./scripts/make-app-bundle.sh
+
+dmg:
+	@chmod +x scripts/make-dmg.sh
+	@./scripts/make-dmg.sh
 
 run: bundle
 	@-pkill -f "$(APP_NAME).app/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true

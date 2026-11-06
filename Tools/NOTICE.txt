@@ -2,8 +2,9 @@ DragConvert bundles the following command-line image tools:
 
 - cwebp 1.6.0 (libwebp) — BSD-3-Clause
   Source: https://chromium.googlesource.com/webm/libwebp
-  Binary: Homebrew bottle for macOS arm64, patched to load its libraries
-  from the same folder with @loader_path.
+  Universal binary: arm64 slice from the Homebrew bottle, patched to load
+  its libraries from the same folder with @loader_path; x86_64 slice built
+  statically from libwebp 1.6.0 + libpng 1.6.59.
 
 - libpng 1.6.59 — libpng License
   Source: http://www.libpng.org/pub/png/libpng.html

@@ -132,7 +132,7 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 
 ---
 
-## What’s new in 0.7.0
+## What’s new in 0.7.1
 
 - **Exact three-wheel layout**: seven conversion wedges, six PDF tools in the reference order, six actions, file size in the centre and no overcrowding.
 - **Opt+Cmd tools / Ctrl+Cmd actions** defaults, with the full modifier picker.
@@ -143,6 +143,13 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 - **Compact dark glass HUD** for progress, success and failure.
 
 The format registry and settings are complete. Local conversion engines ship for images (including WebP, AVIF, RAW and SVG input), PDF (including PDF/A-2B and QR), subtitles and archives. Document, spreadsheet, audio and video engines are the next family and are marked accordingly in the app.
+
+### Packaging fix in 0.7.1
+
+- The app is now **universal** (Apple Silicon + Intel), not arm64-only.
+- A signed **DMG** is published alongside the ZIP, with an Applications shortcut, a Read Me and a Gatekeeper fix command.
+- The bundled `cwebp` helper is universal too.
+- The DMG/ZIP are still ad-hoc signed rather than notarized because no Developer ID certificate is available in this build environment.
 
 ## Installation
 
@@ -172,9 +179,18 @@ make install
 
 `make install` builds the app, signs it with entitlements, installs it to `/Applications/DragConvert.app`, and refreshes macOS LaunchServices so the orange wheel icon appears in Spotlight and Launchpad.
 
-### Option 3: Manual Download
+### Option 3: DMG (Manual Download)
 
-Download the latest `DragConvert-*.zip` from [Releases](https://github.com/j4yop/DragConvert/releases), unzip it, and drag `DragConvert.app` into `/Applications`. The build is ad-hoc signed, not notarized; on first launch use **System Settings → Privacy & Security → Open Anyway** if macOS blocks it.
+Download the latest **`DragConvert-<version>.dmg`** from [Releases](https://github.com/j4yop/DragConvert/releases). Open it, drag `DragConvert.app` into Applications, and launch it. The DMG contains a Read Me and a **Fix Gatekeeper.command** helper.
+
+The app is universal (Apple Silicon and Intel) and ad-hoc signed, but not notarized. If macOS says the app is damaged or cannot be opened, run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/DragConvert.app
+open /Applications/DragConvert.app
+```
+
+You can also right-click the app and choose **Open** twice. A ZIP is still published for people who prefer it.
 
 ### Development Build
 

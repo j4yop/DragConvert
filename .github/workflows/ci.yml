@@ -21,3 +21,9 @@ jobs:
           swift scripts/make-fixtures.swift
           .build/debug/DragConvert --convert Tests/Fixtures/sample.pdf --to jpg
           test -f Tests/Fixtures/sample.jpg
+      - name: Universal bundle
+        run: |
+          CONFIG=release UNIVERSAL=1 ./scripts/make-app-bundle.sh
+          lipo -info build/DragConvert.app/Contents/MacOS/DragConvert | grep -q x86_64
+          lipo -info build/DragConvert.app/Contents/MacOS/DragConvert | grep -q arm64
+          file build/DragConvert.app/Contents/Resources/Tools/cwebp | grep -q "universal binary"
