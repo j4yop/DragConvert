@@ -68,6 +68,7 @@ Live backlog. IDs go in commit messages. Estimates are focused working days.
 - [x] **DRAG-3 · Mixed selections + kinds** — HEIC+PNG and image+PDF convert to their shared formats; GIF is video; PPTX is slides; RTFD/text clipping recognized
 - [x] **PKG-0 · Product identity** — app icon, template menu-bar wheel, About/privacy/licences, browser update link, notarization script and packaging doc
 - [x] **IMG-16a · AVIF export** — ImageIO encoder + wheel target; headless conversion verified
+- [x] **UI-2 · Glass/Solid + tabbed Settings** — dark glass and solid wheel materials, file header above the wheel, hovered-format centre capsule, five-tab General/Formats/Compatibility/Folders/About window, dark glass HUD, real Quality/metadata defaults, Command tools modifier
 - [x] **UI-1 · Tangerine interaction pass** — 0.2 s bloom from 0.45, #FF5200 highlight, glass ring, SF Rounded labels with tracking, hover crossfade, 60 ms tick + haptics, warm HUD success/deny, sidebar settings, About, comma-to-settings, menu-bar toggle
 
 **Lesson from S1:** the panel must be anchored, not follow the pointer, and the

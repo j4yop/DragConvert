@@ -1,8 +1,8 @@
 import AppKit
 import WheelUI
 
-/// Floating progress toast, bottom-right of the active screen.
-/// Non-activating, so it never steals focus from Finder.
+/// Compact, dark glass progress card. It sits near the centre of the active
+/// screen, like the reference's conversion readout, and never steals focus.
 @MainActor
 final class HUDController {
     var onCancel: (() -> Void)?
@@ -91,8 +91,8 @@ final class HUDController {
         guard let visible = screen?.visibleFrame else { return }
         let size = panel.frame.size
         panel.setFrameOrigin(NSPoint(
-            x: visible.maxX - size.width - 24,
-            y: visible.minY + 24
+            x: visible.midX - size.width / 2,
+            y: visible.midY + 40
         ))
     }
 }
@@ -100,7 +100,7 @@ final class HUDController {
 final class HUDPanel: NSPanel {
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 372, height: 94),
+            contentRect: NSRect(x: 0, y: 0, width: 330, height: 78),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -108,7 +108,7 @@ final class HUDPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
-        appearance = NSAppearance(named: .aqua)
+        appearance = NSAppearance(named: .darkAqua)
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         ignoresMouseEvents = false
@@ -141,28 +141,24 @@ final class HUDContentView: NSView {
     private let cancelButton = NSButton()
 
     private let accent = NSColor(srgbRed: 1.0, green: 0.322, blue: 0.0, alpha: 1.0)
-    private let ink = NSColor(calibratedWhite: 0.12, alpha: 0.92)
-    private let muted = NSColor(calibratedWhite: 0.30, alpha: 0.72)
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.cornerRadius = 18
+        layer?.cornerRadius = 14
         layer?.masksToBounds = true
         layer?.borderWidth = 1
-        layer?.borderColor = NSColor.white.withAlphaComponent(0.55).cgColor
+        layer?.borderColor = NSColor.white.withAlphaComponent(0.10).cgColor
 
-        effect.material = .popover
+        effect.material = .hudWindow
         effect.blendingMode = .behindWindow
         effect.state = .active
-        effect.appearance = NSAppearance(named: .aqua)
+        effect.appearance = NSAppearance(named: .darkAqua)
         effect.translatesAutoresizingMaskIntoConstraints = false
         addSubview(effect)
 
         tint.wantsLayer = true
-        tint.layer?.backgroundColor = NSColor(
-            srgbRed: 0.99, green: 0.94, blue: 0.88, alpha: 0.54
-        ).cgColor
+        tint.layer?.backgroundColor = NSColor(calibratedWhite: 0.015, alpha: 0.82).cgColor
         tint.translatesAutoresizingMaskIntoConstraints = false
         addSubview(tint)
 
@@ -171,14 +167,14 @@ final class HUDContentView: NSView {
         icon.translatesAutoresizingMaskIntoConstraints = false
         addSubview(icon)
 
-        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = ink
+        titleLabel.font = .systemFont(ofSize: 12.5, weight: .semibold)
+        titleLabel.textColor = NSColor.white.withAlphaComponent(0.94)
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(titleLabel)
 
-        subtitleLabel.font = .systemFont(ofSize: 11)
-        subtitleLabel.textColor = muted
+        subtitleLabel.font = .systemFont(ofSize: 10.5)
+        subtitleLabel.textColor = NSColor.white.withAlphaComponent(0.52)
         subtitleLabel.lineBreakMode = .byTruncatingTail
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(subtitleLabel)
@@ -187,12 +183,12 @@ final class HUDContentView: NSView {
         addSubview(progress)
 
         cancelButton.image = NSImage(
-            systemSymbolName: "xmark.circle.fill",
+            systemSymbolName: "xmark",
             accessibilityDescription: "Cancel"
         )
         cancelButton.isBordered = false
         cancelButton.bezelStyle = .inline
-        cancelButton.contentTintColor = muted
+        cancelButton.contentTintColor = NSColor.white.withAlphaComponent(0.45)
         cancelButton.target = self
         cancelButton.action = #selector(cancelTapped)
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
@@ -209,28 +205,28 @@ final class HUDContentView: NSView {
             tint.topAnchor.constraint(equalTo: topAnchor),
             tint.bottomAnchor.constraint(equalTo: bottomAnchor),
 
-            icon.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            icon.topAnchor.constraint(equalTo: topAnchor, constant: 16),
-            icon.widthAnchor.constraint(equalToConstant: 22),
-            icon.heightAnchor.constraint(equalToConstant: 22),
+            icon.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            icon.topAnchor.constraint(equalTo: topAnchor, constant: 13),
+            icon.widthAnchor.constraint(equalToConstant: 18),
+            icon.heightAnchor.constraint(equalToConstant: 18),
 
-            cancelButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            cancelButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
             cancelButton.topAnchor.constraint(equalTo: topAnchor, constant: 10),
-            cancelButton.widthAnchor.constraint(equalToConstant: 20),
-            cancelButton.heightAnchor.constraint(equalToConstant: 20),
+            cancelButton.widthAnchor.constraint(equalToConstant: 18),
+            cancelButton.heightAnchor.constraint(equalToConstant: 18),
 
-            titleLabel.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 10),
-            titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 14),
+            titleLabel.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 8),
+            titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 11),
             titleLabel.trailingAnchor.constraint(equalTo: cancelButton.leadingAnchor, constant: -8),
 
             subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 2),
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 1),
             subtitleLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
 
-            progress.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            progress.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            progress.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -14),
-            progress.heightAnchor.constraint(equalToConstant: 4)
+            progress.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            progress.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
+            progress.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
+            progress.heightAnchor.constraint(equalToConstant: 3)
         ])
     }
 
@@ -245,33 +241,36 @@ final class HUDContentView: NSView {
 
         switch state {
         case .running:
-            icon.image = statusIcon("arrow.down.doc.fill", background: accent)
+            icon.image = symbol("arrow.down.doc.fill", color: accent)
             cancelButton.isHidden = false
             progress.isHidden = false
+            progress.color = accent
             progress.start()
-            layer?.borderColor = NSColor.white.withAlphaComponent(0.55).cgColor
+            layer?.borderColor = NSColor.white.withAlphaComponent(0.10).cgColor
         case .success:
             icon.image = statusIcon("checkmark", background: .systemGreen)
             cancelButton.isHidden = true
             progress.isHidden = false
+            progress.color = .systemGreen
             progress.stop()
             progress.value = 1
-            layer?.borderColor = NSColor.systemGreen.withAlphaComponent(0.35).cgColor
-            animateSuccess()
+            layer?.borderColor = NSColor.systemGreen.withAlphaComponent(0.30).cgColor
+            animatePop()
         case .failure:
-            icon.image = statusIcon("exclamationmark", background: .systemRed)
+            icon.image = statusIcon("xmark", background: .systemRed)
             cancelButton.isHidden = true
             progress.isHidden = false
+            progress.color = .systemRed
             progress.stop()
             progress.value = 0
-            layer?.borderColor = NSColor.systemRed.withAlphaComponent(0.42).cgColor
-            animateFailure()
+            layer?.borderColor = NSColor.systemRed.withAlphaComponent(0.36).cgColor
+            animateShake()
         case .info:
-            icon.image = statusIcon("sparkles", background: accent)
+            icon.image = symbol("sparkles", color: accent)
             cancelButton.isHidden = true
             progress.isHidden = true
             progress.stop()
-            layer?.borderColor = NSColor.white.withAlphaComponent(0.55).cgColor
+            layer?.borderColor = NSColor.white.withAlphaComponent(0.10).cgColor
         }
     }
 
@@ -279,47 +278,41 @@ final class HUDContentView: NSView {
         progress.stop()
     }
 
-    private func animateSuccess() {
+    private func animatePop() {
         let pop = CAKeyframeAnimation(keyPath: "transform.scale")
-        pop.values = [0.55, 1.16, 1.0]
+        pop.values = [0.62, 1.14, 1.0]
         pop.keyTimes = [0, 0.55, 1]
-        pop.duration = 0.34
+        pop.duration = 0.30
         pop.timingFunctions = [
             CAMediaTimingFunction(name: .easeOut),
             CAMediaTimingFunction(name: .easeInEaseOut)
         ]
         icon.layer?.add(pop, forKey: "pop")
-
-        let glow = CABasicAnimation(keyPath: "borderColor")
-        glow.fromValue = NSColor.systemGreen.withAlphaComponent(0.85).cgColor
-        glow.toValue = NSColor.systemGreen.withAlphaComponent(0.35).cgColor
-        glow.duration = 0.55
-        layer?.add(glow, forKey: "successGlow")
     }
 
-    private func animateFailure() {
+    private func animateShake() {
         let shake = CAKeyframeAnimation(keyPath: "transform.translation.x")
-        shake.values = [0, -7, 6, -5, 4, -2, 0]
+        shake.values = [0, -6, 5, -4, 3, -1.5, 0]
         shake.keyTimes = [0, 0.14, 0.30, 0.46, 0.62, 0.80, 1]
-        shake.duration = 0.42
+        shake.duration = 0.40
         layer?.add(shake, forKey: "shake")
+    }
 
-        let flash = CABasicAnimation(keyPath: "borderColor")
-        flash.fromValue = NSColor.systemRed.withAlphaComponent(0.9).cgColor
-        flash.toValue = NSColor.systemRed.withAlphaComponent(0.42).cgColor
-        flash.duration = 0.55
-        layer?.add(flash, forKey: "failureFlash")
+    private func symbol(_ name: String, color: NSColor) -> NSImage? {
+        let configuration = NSImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [color]))
+        return NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(configuration)
     }
 
     private func statusIcon(_ name: String, background: NSColor) -> NSImage? {
-        NSImage(size: NSSize(width: 22, height: 22), flipped: false) { rect in
+        NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
             background.setFill()
             NSBezierPath(ovalIn: rect).fill()
-            guard let base = NSImage(
-                systemSymbolName: name,
-                accessibilityDescription: nil
-            ) else { return true }
-            let configuration = NSImage.SymbolConfiguration(pointSize: 11, weight: .bold)
+            guard let base = NSImage(systemSymbolName: name, accessibilityDescription: nil) else {
+                return true
+            }
+            let configuration = NSImage.SymbolConfiguration(pointSize: 9, weight: .bold)
                 .applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
             guard let symbol = base.withSymbolConfiguration(configuration) else { return true }
             let size = symbol.size
@@ -338,9 +331,10 @@ final class HUDContentView: NSView {
     }
 }
 
-
 private final class HUDProgressView: NSView {
-    private let accent = NSColor(srgbRed: 1.0, green: 0.322, blue: 0.0, alpha: 1.0)
+    var color = NSColor(srgbRed: 1.0, green: 0.322, blue: 0.0, alpha: 1.0) {
+        didSet { needsDisplay = true }
+    }
     private var running = false
     private var phase: CGFloat = 0
     private var timer: Timer?
@@ -384,12 +378,12 @@ private final class HUDProgressView: NSView {
             xRadius: bounds.height / 2,
             yRadius: bounds.height / 2
         )
-        NSColor(calibratedWhite: 0.22, alpha: 0.12).setFill()
+        NSColor.white.withAlphaComponent(0.13).setFill()
         track.fill()
 
         let fill: NSRect
         if running {
-            let width = bounds.width * 0.30
+            let width = bounds.width * 0.26
             let travel = bounds.width - width
             let x = travel * phase
             fill = NSRect(x: x, y: 0, width: width, height: bounds.height)
@@ -407,7 +401,7 @@ private final class HUDProgressView: NSView {
             xRadius: bounds.height / 2,
             yRadius: bounds.height / 2
         )
-        accent.setFill()
+        color.setFill()
         bar.fill()
     }
 }

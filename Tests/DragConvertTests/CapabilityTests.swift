@@ -70,7 +70,7 @@ final class CapabilityTests: XCTestCase {
 
     func testModifierRouting() {
         XCTAssertEqual(WheelMode.from(.shift), .convert)
-        XCTAssertEqual(WheelMode.from([.option, .shift]), .tools)
+        XCTAssertEqual(WheelMode.from(.command), .tools)
         XCTAssertEqual(WheelMode.from(.control), .actions)
         XCTAssertEqual(WheelMode.from([.control, .shift]), .actions)
         XCTAssertNil(WheelMode.from([]))
@@ -86,7 +86,7 @@ final class CapabilityTests: XCTestCase {
         var tracker = WheelModeTracker()
         XCTAssertEqual(tracker.update(modifiers: .shift), .convert)
         XCTAssertEqual(tracker.update(modifiers: []), .convert)
-        XCTAssertEqual(tracker.update(modifiers: [.option, .shift]), .tools)
+        XCTAssertEqual(tracker.update(modifiers: .command), .tools)
         XCTAssertEqual(tracker.update(modifiers: []), .tools)
         tracker.reset()
         XCTAssertNil(tracker.update(modifiers: []))

@@ -6,9 +6,14 @@ import AppKit
 final class SettingsTests: XCTestCase {
 
     func testCustomWheelShortcut() {
-        let original = WheelShortcuts.convert
-        defer { WheelShortcuts.convert = original }
+        let originalConvert = WheelShortcuts.convert
+        let originalTools = WheelShortcuts.tools
+        defer {
+            WheelShortcuts.convert = originalConvert
+            WheelShortcuts.tools = originalTools
+        }
 
+        WheelShortcuts.tools = .optionShift
         WheelShortcuts.convert = .command
         XCTAssertEqual(WheelMode.from(.command), .convert)
         XCTAssertNil(WheelMode.from(.option))

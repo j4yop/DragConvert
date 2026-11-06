@@ -16,7 +16,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let wheel = WheelController()
     private var onboardingWindow: OnboardingWindowController?
     private var settingsWindow: SettingsWindowController?
-    private var aboutWindow: AboutWindowController?
     private var lastOutputs: [URL] = []
     private var showMenuBarIcon = true
 
@@ -247,6 +246,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             presentFrame(for: [URL(fileURLWithPath: path)])
         }
 
+        if let styleIndex = CommandLine.arguments.firstIndex(of: "--wheel-style"),
+           styleIndex + 1 < CommandLine.arguments.count {
+            UserDefaults.standard.set(
+                CommandLine.arguments[styleIndex + 1],
+                forKey: "wheelStyle"
+            )
+        }
+
         if let demoIndex = CommandLine.arguments.firstIndex(of: "--wheel-demo") {
             let path = demoIndex + 1 < CommandLine.arguments.count
                 && !CommandLine.arguments[demoIndex + 1].hasPrefix("--")
@@ -330,7 +337,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let item = NSStatusBar.system.statusItem(withLength: 24)
         StatusIcon.apply(to: item.button)
         Log.write("status item visible=\(item.isVisible) button=\(item.button != nil)")
-        item.button?.toolTip = "Drag a file, then hold ⇧ to convert, ⇧⌥ for tools, ⌃ for actions"
+        item.button?.toolTip = "Drag a file, then hold ⇧ to convert, ⌘ for tools, ⌃ for actions"
 
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "About DragConvert", action: #selector(showAbout), keyEquivalent: ""))
@@ -903,15 +910,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showAbout() {
-        if let aboutWindow {
-            aboutWindow.showWindow(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-        let controller = AboutWindowController()
-        aboutWindow = controller
-        controller.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        presentSettings(tab: .about)
     }
 
     @objc private func checkForUpdates() {
@@ -920,12 +919,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showSettings() {
+        presentSettings(tab: .general)
+    }
+
+    private func presentSettings(tab: SettingsTab) {
         if let settingsWindow {
+            settingsWindow.select(tab: tab)
             settingsWindow.showWindow(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let controller = SettingsWindowController()
+        let controller = SettingsWindowController(initialTab: tab)
         settingsWindow = controller
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)

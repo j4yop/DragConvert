@@ -77,6 +77,21 @@ public enum WheelShortcut: String, CaseIterable, Sendable {
         }
     }
 
+    /// Compact labels used by the settings popups, matching the reference.
+    public var menuTitle: String {
+        switch self {
+        case .shift: return "⇧ Shift"
+        case .command: return "⌘ Cmd"
+        case .option: return "⌥ Option"
+        case .optionCommand: return "⌥⌘ Option + Cmd"
+        case .optionShift: return "⇧⌥ Shift + Option"
+        case .control: return "⌃ Ctrl"
+        case .controlOption: return "⌃⌥ Ctrl + Option"
+        case .shiftCommand: return "⇧⌘ Shift + Cmd"
+        case .shiftControl: return "⇧⌃ Shift + Ctrl"
+        }
+    }
+
     public var title: String {
         switch self {
         case .shift: return "⇧ Shift"
@@ -127,7 +142,7 @@ public enum WheelShortcuts {
     }
 
     public static var tools: WheelShortcut {
-        get { read(toolsKey, fallback: .optionShift) }
+        get { read(toolsKey, fallback: .command) }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: toolsKey) }
     }
 
@@ -140,12 +155,14 @@ public enum WheelShortcuts {
     /// legacy value once so the shipping Tangerine shortcut is the default.
     public static func migrateLegacyDefaults() {
         let defaults = UserDefaults.standard
-        guard defaults.string(forKey: toolsKey) == WheelShortcut.optionCommand.rawValue,
-              defaults.object(forKey: "didMigrateToolsShortcut") == nil else {
+        let legacy = [WheelShortcut.optionCommand.rawValue, WheelShortcut.optionShift.rawValue]
+        guard let stored = defaults.string(forKey: toolsKey),
+              legacy.contains(stored),
+              defaults.object(forKey: "didMigrateToolsShortcutV2") == nil else {
             return
         }
-        defaults.set(WheelShortcut.optionShift.rawValue, forKey: toolsKey)
-        defaults.set(true, forKey: "didMigrateToolsShortcut")
+        defaults.set(WheelShortcut.command.rawValue, forKey: toolsKey)
+        defaults.set(true, forKey: "didMigrateToolsShortcutV2")
     }
 
     /// Exact modifier match. Actions win over tools, tools over convert, so a

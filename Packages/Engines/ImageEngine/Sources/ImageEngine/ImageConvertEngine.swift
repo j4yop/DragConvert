@@ -34,13 +34,22 @@ public struct ImageConvertEngine: Engine {
               let image = Self.loadFullSizeImage(from: source) else {
             throw EngineError.corruptInput(input.lastPathComponent)
         }
+        let sourceProperties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
+            as? [CFString: Any]
 
         let output = DestinationPolicy.outputURL(for: input, extension: ext)
         try writeAtomically(to: output) { tmp in
             if ext.lowercased() == "pdf" {
                 try Self.writePDF(image, to: tmp)
             } else {
-                try Self.writeImage(image, to: tmp, extension: ext)
+                try Self.writeImage(
+                    image,
+                    to: tmp,
+                    extension: ext,
+                    metadata: ConversionDefaults.preservesMetadata(for: ext)
+                        ? sourceProperties
+                        : nil
+                )
             }
         }
         progress(1)
@@ -97,7 +106,12 @@ public struct ImageConvertEngine: Engine {
         return CGImageSourceCreateImageAtIndex(source, 0, nil)
     }
 
-    static func writeImage(_ image: CGImage, to url: URL, extension ext: String) throws {
+    static func writeImage(
+        _ image: CGImage,
+        to url: URL,
+        extension ext: String,
+        metadata: [CFString: Any]? = nil
+    ) throws {
         guard let uti = uti(forExtension: ext),
               let destination = CGImageDestinationCreateWithURL(
                 url as CFURL, uti.identifier as CFString, 1, nil
@@ -106,9 +120,26 @@ public struct ImageConvertEngine: Engine {
         }
         var properties: [CFString: Any] = [:]
         if uti == .jpeg {
-            properties[kCGImageDestinationLossyCompressionQuality] = 0.9
+            properties[kCGImageDestinationLossyCompressionQuality] =
+                ConversionDefaults.quality(for: ext, fallback: 0.9)
         } else if uti == .heic {
-            properties[kCGImageDestinationLossyCompressionQuality] = 0.85
+            properties[kCGImageDestinationLossyCompressionQuality] =
+                ConversionDefaults.quality(for: ext, fallback: 0.85)
+        } else if uti == UTType(filenameExtension: "avif") {
+            properties[kCGImageDestinationLossyCompressionQuality] =
+                ConversionDefaults.quality(for: ext, fallback: 0.85)
+        }
+        if let metadata {
+            for key in [
+                kCGImagePropertyExifDictionary,
+                kCGImagePropertyIPTCDictionary,
+                kCGImagePropertyTIFFDictionary,
+                kCGImagePropertyGPSDictionary
+            ] {
+                if let value = metadata[key] {
+                    properties[key] = value
+                }
+            }
         }
         CGImageDestinationAddImage(destination, image, properties as CFDictionary)
         guard CGImageDestinationFinalize(destination) else {

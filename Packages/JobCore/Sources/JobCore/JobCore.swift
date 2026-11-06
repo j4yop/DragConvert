@@ -398,6 +398,37 @@ public struct ImageAnnotateSpec: Equatable, Sendable {
     }
 }
 
+
+/// User-facing conversion defaults shared by the app and the image encoders.
+public enum ConversionDefaults {
+    public static func quality(for ext: String, fallback: Double) -> Double {
+        let id = normalised(ext)
+        guard let raw = UserDefaults.standard.string(forKey: "formatQuality.\(id)") else {
+            return fallback
+        }
+        switch raw {
+        case "best": return 0.95
+        case "high": return 0.88
+        case "medium": return 0.75
+        case "low": return 0.60
+        default: return fallback
+        }
+    }
+
+    public static func preservesMetadata(for ext: String) -> Bool {
+        UserDefaults.standard.object(forKey: "formatPreserve.\(normalised(ext))") as? Bool ?? true
+    }
+
+    private static func normalised(_ ext: String) -> String {
+        switch ext.lowercased() {
+        case "jpeg": return "jpg"
+        case "tif": return "tiff"
+        case "heif": return "heic"
+        default: return ext.lowercased()
+        }
+    }
+}
+
 public enum JobOperation: Equatable, Sendable {
     case convert(to: String)
     case crop(CropSpec)

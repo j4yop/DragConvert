@@ -33,7 +33,7 @@ Every day on macOS, we switch apps, fiddle with export menus, or upload confiden
 Just drag any file in Finder, tap a modifier key, and a fluid radial wheel blooms right under your cursor. Flick to a wedge and release. Your converted or edited file appears instantly **right beside the original**—with zero quality loss, zero telemetry, and zero context switching.
 
 ```
-Drag file in Finder ──> Tap ⇧ / ⇧⌥ / ⌃ ──> Wheel appears anchored ──> Release on wedge ──> Done!
+Drag file in Finder ──> Tap ⇧ / ⌘ / ⌃ ──> Wheel appears anchored ──> Release on wedge ──> Done!
 ```
 
 ---
@@ -45,7 +45,7 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 | Wheel | Trigger | What it does |
 |---|---|---|
 | **Convert** | <kbd>⇧ Shift</kbd> | Instant format conversion (JPG, PNG, HEIC, TIFF, AVIF, BMP, PDF, TXT, Markdown). |
-| **Tools** | <kbd>⇧⌥ Option + Shift</kbd> | In-place creative tools: Crop, Remove BG, Compress, Redact, Annotate, Merge, Split, Frame, Collage. |
+| **Tools** | <kbd>⌘ Command</kbd> | In-place creative tools: Crop, Remove BG, Compress, Redact, Annotate, Merge, Split, Frame, Collage. |
 | **Actions** | <kbd>⌃ Control</kbd> | Utility workflows: AirDrop, Floating Shelf, Copy to Clipboard, Move, Copy Path, Open in Terminal/iTerm2. |
 
 > **Sticky Wheel:** No need to hold down keyboard shortcuts while dragging. Tap the modifier key once and release—the wheel stays pinned until you drop or press <kbd>Esc</kbd>.
@@ -61,7 +61,7 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 * **PDF → Text & Markdown with On-Device OCR**: Extracts clean selectable text streams, falling back to local **Apple Vision OCR** for scanned documents.
 * **Smart Mixed Selections**: Drop mixed file types (e.g., HEIC + PNG); the wheel dynamically calculates their common target formats. Files already matching the target are safely skipped.
 
-### 🛠️ In-Place Pro Tools (`⇧⌥ Option + Shift`)
+### 🛠️ In-Place Pro Tools (`⌘ Command`)
 * **Precision Crop & Batch Crop**: 8-handle interactive crop panel with aspect ratio presets (`Free`, `1:1`, `16:9`, `9:16`, `4:3`, `3:4`) and live pixel dimensions. Batch-crop an entire selection with one normalized framing.
 * **Instant Background Removal**: Runs Apple Vision foreground segmentation on-device via the Neural Engine. Exports a clean, transparent PNG in milliseconds.
 * **Smart Compression**: Target an exact file size (e.g. *"Hit exactly 500 KB"*) or pick a quality percentage. Iterative search never inflates files that are already small.
@@ -95,14 +95,23 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
   <img src="docs/screenshots/settings.png" width="600" alt="DragConvert Settings" />
 </p>
 
+| Glass wheel | Solid wheel |
+|---|---|
+| ![Glass wheel](docs/screenshots/wheel.png) | ![Solid wheel](docs/screenshots/wheel-solid.png) |
+
+| Formats | Compatibility | Folders |
+|---|---|---|
+| ![Formats](docs/screenshots/settings-formats.png) | ![Compatibility](docs/screenshots/settings-compatibility.png) | ![Folders](docs/screenshots/settings-folders.png) |
+
 * **Full Keyboard Navigation**:
   * <kbd>1</kbd>–<kbd>9</kbd>: Instantly picks a numbered wedge.
   * <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd>: Cycles through options.
   * <kbd>Return</kbd>: Executes hovered tool.
   * <kbd>Esc</kbd>: Dismisses the wheel.
   * *Prevents accidental drops*: When activated via keyboard, the panel stays locked to absorb Finder’s pending mouse-up.
-* **Tactile Feedback**: A soft 60 ms hover tick plus alignment haptics; separate sound and haptics toggles. The wheel blooms in 0.2 s and crossfades the hovered wedge to `#FF5200`.
-* **Centre Thumbnail & Size Pill**: Shows an instant visual preview of dragged contents, file sizes, and item counts.
+* **Glass and Solid Styles**: Two wheel materials — translucent dark glass with an orange hover, or opaque charcoal with a light hover. Switch them in Settings.
+* **Tactile Feedback**: A soft 60 ms hover tick plus alignment haptics; separate sound and haptics toggles. The wheel blooms in 0.2 s and crossfades to `#FF5200` in Glass.
+* **File Header + Format Capsule**: The dragged file icon and name sit above the wheel; the centre capsule shows the target format as you move.
 * **Non-Activating Floating Panel**: Never steals frontmost focus or interrupts your active workspace.
 * **Atomic Writes & Collision Protection**: Writes via temporary files (`.<UUID>.tmp`) before swapping. Automatically uses smart collision naming (`sample 2.jpg`) so your original files are never overwritten.
 * **Uncompromising Privacy**: Sandboxed with zero network entitlements. No phone-home telemetry, no analytics, no external servers.
@@ -122,6 +131,14 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 | **Auditability** | **Full Source Available** | Closed Source | Closed Source |
 
 ---
+
+## What’s new in 0.6.0
+
+- **Glass / Solid wheel styles** with the reference’s dark materials, hover colours, centre format capsule and file header.
+- **Five-tab dark Settings** — General, Formats, Compatibility, Folders and About — with orange checkboxes, popup controls and modifier menus.
+- **Compact dark glass HUD** for progress, success and failure.
+- **Real format defaults**: Quality and Preserve metadata now feed the image encoder.
+- **Command** is the default Tools modifier, matching the reference.
 
 ## Installation
 
