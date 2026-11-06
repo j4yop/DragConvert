@@ -34,7 +34,7 @@ public final class WheelPanel: NSPanel {
     private let container = NSView()
     public private(set) var style: WheelStyle = .glass
 
-    public init(width: CGFloat = 320, height: CGFloat = 408) {
+    public init(width: CGFloat = 300, height: CGFloat = 300) {
         container.frame = NSRect(x: 0, y: 0, width: width, height: height)
         container.wantsLayer = true
 
@@ -56,7 +56,7 @@ public final class WheelPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
-        level = .popUpMenu
+        level = .screenSaver
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         ignoresMouseEvents = false
         isMovableByWindowBackground = false
@@ -93,17 +93,17 @@ public final class WheelPanel: NSPanel {
 
     private static func ringMask(size: NSSize) -> NSImage {
         let image = NSImage(size: size, flipped: false) { rect in
-            let center = NSPoint(x: rect.midX, y: 140)
+            let center = NSPoint(x: rect.midX, y: rect.midY)
             let outer = NSBezierPath(
                 ovalIn: NSRect(
-                    x: center.x - 126, y: center.y - 126,
-                    width: 252, height: 252
+                    x: center.x - 132, y: center.y - 132,
+                    width: 264, height: 264
                 )
             )
             let inner = NSBezierPath(
                 ovalIn: NSRect(
-                    x: center.x - 112, y: center.y - 112,
-                    width: 224, height: 224
+                    x: center.x - 118, y: center.y - 118,
+                    width: 236, height: 236
                 )
             )
             let ring = NSBezierPath()
@@ -169,16 +169,16 @@ public final class WheelView: NSView {
 
     // MARK: Geometry
 
-    /// The wheel sits in the lower part of the panel so the file header can
-    /// float above it, exactly like the reference overlay.
-    private var wheelCenter: NSPoint { NSPoint(x: bounds.midX, y: 140) }
-    private var outerRadius: CGFloat { min(bounds.width / 2 - 26, 112) }
+    /// The dial is a single square overlay: the drag preview floats over its
+    /// centre, exactly like the reference.
+    private var wheelCenter: NSPoint { NSPoint(x: bounds.midX, y: bounds.midY) }
+    private var outerRadius: CGFloat { min(bounds.width / 2 - 32, 118) }
     private var innerRadius: CGFloat { 50 }
 
     private func wedgeAngles(_ index: Int, count: Int) -> (start: CGFloat, end: CGFloat) {
         let step = 360.0 / CGFloat(count)
         let center = 90.0 - step * CGFloat(index)
-        let gap: CGFloat = count > 8 ? 0.55 : 0.9
+        let gap: CGFloat = count > 8 ? 0.7 : 1.35
         return (center - step / 2 + gap, center + step / 2 - gap)
     }
 
@@ -363,7 +363,6 @@ public final class WheelView: NSView {
     // MARK: Drawing
 
     public override func draw(_ dirtyRect: NSRect) {
-        drawHeader()
         guard !items.isEmpty else { return }
 
         NSGraphicsContext.saveGraphicsState()
@@ -379,53 +378,6 @@ public final class WheelView: NSView {
         drawCentre()
 
         NSGraphicsContext.restoreGraphicsState()
-    }
-
-    private func drawHeader() {
-        guard let preview else { return }
-
-        let iconSize: CGFloat = 32
-        let iconRect = NSRect(
-            x: bounds.midX - iconSize / 2,
-            y: bounds.maxY - 48,
-            width: iconSize,
-            height: iconSize
-        )
-
-        if preview.isMultiple {
-            let behind = iconRect.offsetBy(dx: -4, dy: 4)
-            NSColor(white: 0.25, alpha: 0.9).setFill()
-            NSBezierPath(roundedRect: behind, xRadius: 7, yRadius: 7).fill()
-        }
-
-        if let image = preview.image {
-            drawImageFilled(image, in: iconRect, cornerRadius: 7)
-        } else {
-            NSColor(white: 0.18, alpha: 1).setFill()
-            NSBezierPath(roundedRect: iconRect, xRadius: 7, yRadius: 7).fill()
-            drawSymbol("doc.fill", in: iconRect.insetBy(dx: 8, dy: 7), color: NSColor(white: 0.82, alpha: 1))
-        }
-
-        NSColor.white.withAlphaComponent(0.16).setStroke()
-        let iconStroke = NSBezierPath(roundedRect: iconRect, xRadius: 7, yRadius: 7)
-        iconStroke.lineWidth = 1
-        iconStroke.stroke()
-
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-        paragraph.lineBreakMode = .byTruncatingMiddle
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: labelFont(size: 11, weight: .semibold),
-            .foregroundColor: NSColor.white.withAlphaComponent(0.94),
-            .paragraphStyle: paragraph
-        ]
-        let nameRect = NSRect(
-            x: 18,
-            y: bounds.maxY - 82,
-            width: bounds.width - 36,
-            height: 30
-        )
-        (preview.fileName as NSString).draw(in: nameRect, withAttributes: attributes)
     }
 
     private func drawBackdrop() {
@@ -553,7 +505,7 @@ public final class WheelView: NSView {
 
     private func drawCentre() {
         let center = wheelCenter
-        let plateSize: CGFloat = 82
+        let plateSize: CGFloat = 92
         let plateRect = NSRect(
             x: center.x - plateSize / 2,
             y: center.y - plateSize / 2,
@@ -562,8 +514,8 @@ public final class WheelView: NSView {
         )
         let plate = NSBezierPath(
             roundedRect: plateRect,
-            xRadius: 17,
-            yRadius: 17
+            xRadius: 20,
+            yRadius: 20
         )
         NSColor(white: 0.035, alpha: style == .solid ? 1 : 0.90).setFill()
         plate.fill()
@@ -571,22 +523,22 @@ public final class WheelView: NSView {
         plate.lineWidth = 1
         plate.stroke()
 
-        let title = hoveredItem?.title ?? "DRAG"
-        let font = labelFont(size: title.count > 8 ? 9.8 : 12, weight: .semibold)
+        let title = hoveredItem?.title ?? preview?.fileSize ?? "DRAG"
+        let font = labelFont(size: title.count > 9 ? 9.2 : (title.count > 6 ? 11.2 : 13), weight: .semibold)
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: NSColor.white,
             .kern: 0.2
         ]
         let textSize = (title as NSString).size(withAttributes: attributes)
-        let capWidth = min(plateSize - 12, max(54, textSize.width + 24))
+        let capWidth = min(plateSize - 10, max(58, textSize.width + 26))
         let capRect = NSRect(
             x: center.x - capWidth / 2,
-            y: center.y - 13,
+            y: center.y - 14,
             width: capWidth,
-            height: 26
+            height: 28
         )
-        let cap = NSBezierPath(roundedRect: capRect, xRadius: 8.5, yRadius: 8.5)
+        let cap = NSBezierPath(roundedRect: capRect, xRadius: 9.5, yRadius: 9.5)
 
         if style == .solid {
             NSColor(white: 0.015, alpha: 1).setFill()
@@ -674,7 +626,7 @@ public final class WheelView: NSView {
     }
 
     private func draw(item: WheelItem, at p: NSPoint, color: NSColor, compact: Bool) {
-        let font = labelFont(size: compact ? 10.5 : 13, weight: .semibold)
+        let font = labelFont(size: compact ? 10.2 : 12.5, weight: .semibold)
         let text = item.title as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -686,7 +638,7 @@ public final class WheelView: NSView {
 
         if !item.symbol.isEmpty,
            let base = NSImage(systemSymbolName: item.symbol, accessibilityDescription: nil) {
-            let cfg = NSImage.SymbolConfiguration(pointSize: compact ? 12 : 15, weight: .semibold)
+            let cfg = NSImage.SymbolConfiguration(pointSize: compact ? 11 : 13, weight: .semibold)
             if let symbol = base.withSymbolConfiguration(cfg) {
                 let tinted = tint(symbol, color: color)
                 let s = symbol.size
@@ -726,14 +678,14 @@ public final class WheelController {
     public var onCancel: (() -> Void)?
     public var onOpenSettings: (() -> Void)?
 
-    private let panel = WheelPanel(width: 320, height: 408)
+    private let panel = WheelPanel(width: 300, height: 300)
     private var keyMonitor: Any?
     private let wheel: WheelView
     private var isShown = false
     private var appearTimer: Timer?
 
     public init() {
-        wheel = WheelView(frame: NSRect(x: 0, y: 0, width: 320, height: 408))
+        wheel = WheelView(frame: NSRect(x: 0, y: 0, width: 300, height: 300))
         wheel.glassEnabled = !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
         panel.addWheel(wheel)
         wheel.onDrop = { [weak self] item, urls in
@@ -796,14 +748,14 @@ public final class WheelController {
         wheel.highlight(index)
     }
 
-    /// The wheel blooms above the pointer. This keeps the dragged file's
-    /// system preview below the wheel instead of covering the wedges.
+    /// The dial blooms around the drag point. Finder's drag preview floats
+    /// over it, so the ring stays where the pointer is.
     public func move(to point: CGPoint) {
         let size = panel.frame.size
         let screen = NSScreen.screens.first { $0.frame.contains(point) } ?? NSScreen.main
         let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         var x = point.x - size.width / 2
-        var y = point.y + 26
+        var y = point.y - size.height / 2
         x = min(max(x, visible.minX), visible.maxX - size.width)
         y = min(max(y, visible.minY), visible.maxY - size.height)
         panel.setFrameOrigin(NSPoint(x: x, y: y))

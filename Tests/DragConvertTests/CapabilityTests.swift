@@ -69,24 +69,35 @@ final class CapabilityTests: XCTestCase {
     }
 
     func testModifierRouting() {
+        let originalTools = WheelShortcuts.tools
+        let originalActions = WheelShortcuts.actions
+        defer {
+            WheelShortcuts.tools = originalTools
+            WheelShortcuts.actions = originalActions
+        }
+        WheelShortcuts.tools = .optionCommand
+        WheelShortcuts.actions = .controlCommand
+
         XCTAssertEqual(WheelMode.from(.shift), .convert)
-        XCTAssertEqual(WheelMode.from(.command), .tools)
-        XCTAssertEqual(WheelMode.from(.control), .actions)
-        XCTAssertEqual(WheelMode.from([.control, .shift]), .actions)
+        XCTAssertEqual(WheelMode.from([.option, .command]), .tools)
+        XCTAssertEqual(WheelMode.from([.control, .command]), .actions)
+        XCTAssertNil(WheelMode.from(.command))
+        XCTAssertEqual(WheelMode.from(.control), nil)
+        XCTAssertEqual(WheelMode.from([.control, .command, .shift]), .actions)
         XCTAssertNil(WheelMode.from([]))
     }
 
-    func testSVGIsNotAdvertisedUntilResvgShips() {
+    func testSVGInputUsesTheRasterizer() {
         let svg = URL(fileURLWithPath: "/tmp/vector.svg")
         let job = Job(inputs: [svg], operation: .convert(to: "png"))
-        XCTAssertFalse(ImageConvertEngine().canHandle(job))
+        XCTAssertTrue(ImageConvertEngine().canHandle(job))
     }
 
     func testWheelStaysOpenAfterModifierRelease() {
         var tracker = WheelModeTracker()
         XCTAssertEqual(tracker.update(modifiers: .shift), .convert)
         XCTAssertEqual(tracker.update(modifiers: []), .convert)
-        XCTAssertEqual(tracker.update(modifiers: .command), .tools)
+        XCTAssertEqual(tracker.update(modifiers: [.option, .command]), .tools)
         XCTAssertEqual(tracker.update(modifiers: []), .tools)
         tracker.reset()
         XCTAssertNil(tracker.update(modifiers: []))

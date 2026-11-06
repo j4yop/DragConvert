@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var photoEditorWindow: PhotoEditorWindowController?
     private var qrWindow: QRResultWindowController?
     private var qrTask: Task<Void, Never>?
+    private var pdfaTask: Task<Void, Never>?
     private var metadataWindow: MetadataWindowController?
     private var metadataTask: Task<Void, Never>?
     private var splitWindow: SplitPDFWindowController?
@@ -260,7 +261,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 ? CommandLine.arguments[demoIndex + 1]
                 : ""
             let files = path.isEmpty ? [] : [URL(fileURLWithPath: path)]
-            let mode: WheelMode = CommandLine.arguments.contains("--wheel-tools") ? .tools : .convert
+            let mode: WheelMode = CommandLine.arguments.contains("--wheel-tools")
+                ? .tools
+                : (CommandLine.arguments.contains("--wheel-actions") ? .actions : .convert)
             let items = files.isEmpty
                 ? Capabilities.items(mode: .actions, kind: .pdf)
                 : validItems(mode: mode, files: files)
@@ -297,6 +300,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 ),
                 on: [URL(fileURLWithPath: path)]
             )
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--pdfa-demo"),
+           index + 1 < CommandLine.arguments.count {
+            runPDFA(input: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
         }
 
         if CommandLine.arguments.contains("--settings-demo") {
@@ -446,8 +454,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "tool:metadata", "tool:collage", "tool:readqr", "tool:edit"
         ]
         let pdfTools: Set<String> = [
-            "tool:compress", "tool:crop", "tool:annotate", "tool:redact",
-            "tool:addbg", "tool:metadata", "tool:merge", "tool:organize", "tool:split"
+            "tool:compress", "tool:metadata", "tool:split",
+            "tool:organize", "tool:pdfa", "tool:readqr", "tool:merge"
         ]
 
         switch kind {
@@ -456,9 +464,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if files.count > 1 {
                 return item.id == "tool:crop" || item.id == "tool:collage"
             }
-            // SVG is input-only in the reference and not a reliable ImageIO
-            // source here; do not offer editors until it has a decoder test.
-            return files.allSatisfy { $0.pathExtension.lowercased() != "svg" }
+            return true
         case .pdf:
             guard pdfTools.contains(item.id) else { return false }
             if files.count > 1 { return item.id == "tool:merge" }
@@ -644,11 +650,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if item.id == "tool:readqr" {
-            guard let input = urls.first, FileKind.detect(input) == .image else {
-                hud.fail("Read QR is wired for images so far")
+            guard let input = urls.first,
+                  [.image, .pdf].contains(FileKind.detect(input)) else {
+                hud.fail("Read QR needs an image or PDF")
                 return
             }
             runReadQR(input: input)
+            return
+        }
+
+        if item.id == "tool:pdfa" {
+            guard let input = urls.first, FileKind.detect(input) == .pdf else {
+                hud.fail("PDF/A-2B needs a PDF")
+                return
+            }
+            runPDFA(input: input)
             return
         }
 
@@ -953,6 +969,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return PDFToImageEngine()
         case .image:
             return ImageConvertEngine()
+        case .subtitle:
+            return SubtitleEngine()
+        case .archive:
+            return ArchiveEngine()
         default:
             return nil
         }
@@ -1415,6 +1435,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: Read QR
+
+    private func runPDFA(input: URL) {
+        hud.onCancel = { [weak self] in self?.pdfaTask?.cancel() }
+        hud.show(title: "Converting to PDF/A-2B", subtitle: input.lastPathComponent)
+        pdfaTask = Task { @MainActor [weak self] in
+            do {
+                let output = try await Task.detached(priority: .userInitiated) {
+                    try PDFAConverter.convert(input)
+                }.value
+                guard !Task.isCancelled else { return }
+                self?.lastOutputs = [output]
+                self?.hud.succeed(
+                    title: "Converted to PDF/A-2B",
+                    subtitle: output.lastPathComponent
+                )
+                Reveal.ifEnabled([output])
+                Log.write("pdfa created \(output.path)")
+            } catch {
+                self?.hud.fail(error.localizedDescription)
+                Log.write("pdfa failed: \(error.localizedDescription)")
+            }
+        }
+    }
 
     private func runReadQR(input: URL) {
         _ = FolderAccess.shared.ensureAccess()

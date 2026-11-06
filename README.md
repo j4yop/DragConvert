@@ -33,7 +33,7 @@ Every day on macOS, we switch apps, fiddle with export menus, or upload confiden
 Just drag any file in Finder, tap a modifier key, and a fluid radial wheel blooms right under your cursor. Flick to a wedge and release. Your converted or edited file appears instantly **right beside the original**—with zero quality loss, zero telemetry, and zero context switching.
 
 ```
-Drag file in Finder ──> Tap ⇧ / ⌘ / ⌃ ──> Wheel appears anchored ──> Release on wedge ──> Done!
+Drag file in Finder ──> Tap ⇧ / ⌥⌘ / ⌃⌘ ──> Wheel appears anchored ──> Release on wedge ──> Done!
 ```
 
 ---
@@ -45,8 +45,8 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 | Wheel | Trigger | What it does |
 |---|---|---|
 | **Convert** | <kbd>⇧ Shift</kbd> | Instant format conversion (JPG, PNG, HEIC, TIFF, AVIF, BMP, PDF, TXT, Markdown). |
-| **Tools** | <kbd>⌘ Command</kbd> | In-place creative tools: Crop, Remove BG, Compress, Redact, Annotate, Merge, Split, Frame, Collage. |
-| **Actions** | <kbd>⌃ Control</kbd> | Utility workflows: AirDrop, Floating Shelf, Copy to Clipboard, Move, Copy Path, Open in Terminal/iTerm2. |
+| **Tools** | <kbd>⌥⌘ Option + Command</kbd> | Six primary tools per file: Compress, Metadata, Split, Organize, PDF/A-2B and Read QR for PDFs; Compress, Crop, Resize, Rotate, Redact and Metadata for images. Multi-selection adds Merge/Collage. |
+| **Actions** | <kbd>⌃⌘ Control + Command</kbd> | Utility workflows: AirDrop, Floating Shelf, Copy to Clipboard, Move, Copy Path, Open in Terminal/iTerm2. |
 
 > **Sticky Wheel:** No need to hold down keyboard shortcuts while dragging. Tap the modifier key once and release—the wheel stays pinned until you drop or press <kbd>Esc</kbd>.
 
@@ -61,8 +61,8 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 * **PDF → Text & Markdown with On-Device OCR**: Extracts clean selectable text streams, falling back to local **Apple Vision OCR** for scanned documents.
 * **Smart Mixed Selections**: Drop mixed file types (e.g., HEIC + PNG); the wheel dynamically calculates their common target formats. Files already matching the target are safely skipped.
 
-### 🛠️ In-Place Pro Tools (`⌘ Command`)
-* **Precision Crop & Batch Crop**: 8-handle interactive crop panel with aspect ratio presets (`Free`, `1:1`, `16:9`, `9:16`, `4:3`, `3:4`) and live pixel dimensions. Batch-crop an entire selection with one normalized framing.
+### 🛠️ In-Place Pro Tools (`⌥⌘ Option + Command`)
+* **Precision Crop & Batch Crop**: 8-handle interactive crop panel with aspect ratio presets (`Free`, `1:1`, `16:9`, `9:16`, `4:3`, `3:4`) and live pixel dimensions. Batch-crop an entire selection with one normalized framing. The tools wheel keeps six primary tools per file; multi-file selections add Merge (PDFs) and Collage (images).
 * **Instant Background Removal**: Runs Apple Vision foreground segmentation on-device via the Neural Engine. Exports a clean, transparent PNG in milliseconds.
 * **Smart Compression**: Target an exact file size (e.g. *"Hit exactly 500 KB"*) or pick a quality percentage. Iterative search never inflates files that are already small.
 * **True Content Redaction**: Not just visual black boxes—flattened, destructive pixel wipe for both Images and PDFs. Underlying text and vectors are physically destroyed.
@@ -79,7 +79,7 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 * **Metadata Viewer & Stripper**: Inspect camera models, EXIF, IPTC, and GPS data, with a single-click clean strip for web sharing.
 * **QR Code Scanner**: Decodes barcodes and QR codes on-device with immediate clipboard copy or one-click URL opening.
 
-### ⚡ Instant File Actions (`⌃ Control`)
+### ⚡ Instant File Actions (`⌃⌘ Control + Command`)
 * **AirDrop**: Sends selection immediately via the macOS sharing service.
 * **Floating Shelf**: Park files on a discreet floating desktop shelf to drag into Slack, emails, or other apps later.
 * **Copy to Clipboard**: Places real file URLs directly on your system clipboard for native Finder pasting.
@@ -95,13 +95,13 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
   <img src="docs/screenshots/settings.png" width="600" alt="DragConvert Settings" />
 </p>
 
-| Glass wheel | Solid wheel |
-|---|---|
-| ![Glass wheel](docs/screenshots/wheel.png) | ![Solid wheel](docs/screenshots/wheel-solid.png) |
-
-| Formats | Compatibility | Folders |
+| Conversion wheel | PDF tools | Actions |
 |---|---|---|
-| ![Formats](docs/screenshots/settings-formats.png) | ![Compatibility](docs/screenshots/settings-compatibility.png) | ![Folders](docs/screenshots/settings-folders.png) |
+| ![Conversion wheel](docs/screenshots/wheel.png) | ![PDF tools](docs/screenshots/wheel-tools.png) | ![Actions](docs/screenshots/wheel-actions.png) |
+
+| General settings | Formats | Compatibility |
+|---|---|---|
+| ![General settings](docs/screenshots/settings.png) | ![Formats](docs/screenshots/settings-formats.png) | ![Compatibility](docs/screenshots/settings-compatibility.png) |
 
 * **Full Keyboard Navigation**:
   * <kbd>1</kbd>–<kbd>9</kbd>: Instantly picks a numbered wedge.
@@ -132,13 +132,17 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 
 ---
 
-## What’s new in 0.6.0
+## What’s new in 0.7.0
 
-- **Glass / Solid wheel styles** with the reference’s dark materials, hover colours, centre format capsule and file header.
-- **Five-tab dark Settings** — General, Formats, Compatibility, Folders and About — with orange checkboxes, popup controls and modifier menus.
+- **Exact three-wheel layout**: seven conversion wedges, six PDF tools in the reference order, six actions, file size in the centre and no overcrowding.
+- **Opt+Cmd tools / Ctrl+Cmd actions** defaults, with the full modifier picker.
+- **Full grouped Formats catalog** — Images, Documents, Spreadsheets, Audio, Video, Archives, Subtitles — with the reference per-format settings panels.
+- **Format Compatibility matrix** for every group, with the reference columns, checkmarks and honest dashes.
+- **Real WebP encoding**, PDF/A-2B export, Read QR for PDFs, subtitle conversion and ZIP/TAR/GZIP conversion.
+- **Appearance section**, 30 pt content margins, compact rows, brown modifier pills and a fixed Quit footer in General.
 - **Compact dark glass HUD** for progress, success and failure.
-- **Real format defaults**: Quality and Preserve metadata now feed the image encoder.
-- **Command** is the default Tools modifier, matching the reference.
+
+The format registry and settings are complete. Local conversion engines ship for images (including WebP, AVIF, RAW and SVG input), PDF (including PDF/A-2B and QR), subtitles and archives. Document, spreadsheet, audio and video engines are the next family and are marked accordingly in the app.
 
 ## Installation
 

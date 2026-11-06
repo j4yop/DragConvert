@@ -109,7 +109,7 @@ final class HUDPanel: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         appearance = NSAppearance(named: .darkAqua)
-        level = .floating
+        level = .screenSaver
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         ignoresMouseEvents = false
         hidesOnDeactivate = false

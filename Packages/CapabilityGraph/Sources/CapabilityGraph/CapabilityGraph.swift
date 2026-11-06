@@ -12,7 +12,7 @@ public enum FileKind: String, CaseIterable, Sendable {
     public static func detect(_ url: URL) -> FileKind {
         switch url.pathExtension.lowercased() {
         case "pdf": return .pdf
-        case "jpg", "jpeg", "png", "heic", "heif", "webp", "tiff", "tif", "bmp", "avif", "svg":
+        case "jpg", "jpeg", "png", "heic", "heif", "webp", "tiff", "tif", "bmp", "avif", "svg", "dng", "cr2", "cr3", "nef", "arw", "raf", "orf", "rw2":
             return .image
         case "gif", "mp4", "mov", "m4v", "mkv", "webm", "avi", "wmv":
             return .video
@@ -61,7 +61,7 @@ public enum WheelMode: String, Sendable, CaseIterable {
 }
 
 public enum WheelShortcut: String, CaseIterable, Sendable {
-    case shift, command, option, optionCommand, optionShift, control, controlOption, shiftCommand, shiftControl
+    case shift, command, option, optionCommand, optionShift, control, controlOption, controlCommand, shiftCommand, shiftControl
 
     public var flags: NSEvent.ModifierFlags {
         switch self {
@@ -72,6 +72,7 @@ public enum WheelShortcut: String, CaseIterable, Sendable {
         case .optionShift: return [.option, .shift]
         case .control: return .control
         case .controlOption: return [.control, .option]
+        case .controlCommand: return [.control, .command]
         case .shiftCommand: return [.shift, .command]
         case .shiftControl: return [.shift, .control]
         }
@@ -83,10 +84,11 @@ public enum WheelShortcut: String, CaseIterable, Sendable {
         case .shift: return "⇧ Shift"
         case .command: return "⌘ Cmd"
         case .option: return "⌥ Option"
-        case .optionCommand: return "⌥⌘ Option + Cmd"
+        case .optionCommand: return "⌥⌘ Opt + Cmd"
         case .optionShift: return "⇧⌥ Shift + Option"
         case .control: return "⌃ Ctrl"
         case .controlOption: return "⌃⌥ Ctrl + Option"
+        case .controlCommand: return "⌃⌘ Ctrl + Cmd"
         case .shiftCommand: return "⇧⌘ Shift + Cmd"
         case .shiftControl: return "⇧⌃ Shift + Ctrl"
         }
@@ -101,6 +103,7 @@ public enum WheelShortcut: String, CaseIterable, Sendable {
         case .optionShift: return "⇧⌥ Shift + Option"
         case .control: return "⌃ Control"
         case .controlOption: return "⌃⌥ Control + Option"
+        case .controlCommand: return "⌃⌘ Control + Command"
         case .shiftCommand: return "⇧⌘ Shift + Command"
         case .shiftControl: return "⇧⌃ Shift + Control"
         }
@@ -142,12 +145,12 @@ public enum WheelShortcuts {
     }
 
     public static var tools: WheelShortcut {
-        get { read(toolsKey, fallback: .command) }
+        get { read(toolsKey, fallback: .optionCommand) }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: toolsKey) }
     }
 
     public static var actions: WheelShortcut {
-        get { read(actionsKey, fallback: .control) }
+        get { read(actionsKey, fallback: .controlCommand) }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: actionsKey) }
     }
 
@@ -155,14 +158,18 @@ public enum WheelShortcuts {
     /// legacy value once so the shipping Tangerine shortcut is the default.
     public static func migrateLegacyDefaults() {
         let defaults = UserDefaults.standard
-        let legacy = [WheelShortcut.optionCommand.rawValue, WheelShortcut.optionShift.rawValue]
-        guard let stored = defaults.string(forKey: toolsKey),
-              legacy.contains(stored),
-              defaults.object(forKey: "didMigrateToolsShortcutV2") == nil else {
+        let legacyTools = [WheelShortcut.command.rawValue, WheelShortcut.optionShift.rawValue]
+        let legacyActions = [WheelShortcut.control.rawValue]
+        guard defaults.object(forKey: "didMigrateWheelShortcutV3") == nil else {
             return
         }
-        defaults.set(WheelShortcut.command.rawValue, forKey: toolsKey)
-        defaults.set(true, forKey: "didMigrateToolsShortcutV2")
+        if let stored = defaults.string(forKey: toolsKey), legacyTools.contains(stored) {
+            defaults.set(WheelShortcut.optionCommand.rawValue, forKey: toolsKey)
+        }
+        if let stored = defaults.string(forKey: actionsKey), legacyActions.contains(stored) {
+            defaults.set(WheelShortcut.controlCommand.rawValue, forKey: actionsKey)
+        }
+        defaults.set(true, forKey: "didMigrateWheelShortcutV3")
     }
 
     /// Exact modifier match. Actions win over tools, tools over convert, so a
@@ -228,11 +235,11 @@ public enum Capabilities {
         case .pdf:
             return ["docx", "pages", "pptx", "xlsx", "jpg", "png", "tiff", "epub", "txt", "md"]
         case .document:
-            return ["pdf", "docx", "pages", "md", "txt", "epub", "html", "jpg", "png"]
+            return ["pdf", "docx", "pages", "txt", "md", "html", "epub", "rtf", "rtfd", "jpg", "png"]
         case .slides:
             return ["pdf", "jpg", "png"]
         case .spreadsheet:
-            return ["csv", "tsv", "xlsx", "ods", "pdf"]
+            return ["xlsx", "xls", "ods", "csv", "tsv", "pdf"]
         case .audio:
             return ["mp3", "m4a", "wav", "flac", "ogg", "opus", "aiff", "wma"]
         case .video:
@@ -249,7 +256,12 @@ public enum Capabilities {
     public static func tools(_ kind: FileKind) -> [WheelItem] {
         func make(_ pairs: [(String, String)]) -> [WheelItem] {
             pairs.map { pair in
-                let key = pair.0.lowercased().replacingOccurrences(of: " ", with: "")
+                let key: String
+                if pair.0 == "PDF/A-2B" {
+                    key = "pdfa"
+                } else {
+                    key = pair.0.lowercased().replacingOccurrences(of: " ", with: "")
+                }
                 return WheelItem(id: "tool:\(key)", title: pair.0.uppercased(), symbol: pair.1)
             }
         }
@@ -260,26 +272,17 @@ public enum Capabilities {
                 ("Crop", "crop"),
                 ("Resize", "arrow.up.left.and.arrow.down.right"),
                 ("Rotate", "rotate.right"),
-                ("Annotate", "pencil.and.outline"),
-                ("Add BG", "photo"),
                 ("Redact", "eye.slash"),
-                ("Remove BG", "person.crop.circle"),
-                ("Metadata", "tag"),
-                ("Collage", "square.grid.2x2"),
-                ("Read QR", "qrcode"),
-                ("Edit", "slider.horizontal.3")
+                ("Metadata", "tag")
             ])
         case .pdf:
             return make([
                 ("Compress", "arrow.down.right.and.arrow.up.left"),
-                ("Crop", "crop"),
-                ("Annotate", "pencil.and.outline"),
-                ("Redact", "eye.slash"),
-                ("Add BG", "photo"),
                 ("Metadata", "tag"),
-                ("Merge", "doc.on.doc"),
-                ("Organize", "rectangle.3.group"),
-                ("Split", "scissors")
+                ("Split", "rectangle.split.2x1"),
+                ("Organize", "square.grid.2x2"),
+                ("PDF/A-2B", "checkmark.seal"),
+                ("Read QR", "qrcode")
             ])
         case .video:
             return make([
@@ -304,24 +307,27 @@ public enum Capabilities {
         }
     }
 
-    /// Tools that genuinely work on a multi-file selection today.
+    /// Tools that genuinely work on a multi-file selection today. The
+    /// single-file ring stays compact; a selection gets only its batch tools.
     public static func tools(_ kind: FileKind, fileCount: Int) -> [WheelItem] {
-        let all = tools(kind)
-        guard fileCount > 1 else {
-            // Merge and collage need a selection. A single file should not
-            // see a wedge that cannot do anything useful.
-            return all.filter { $0.id != "tool:merge" && $0.id != "tool:collage" }
-        }
-        let allowed: Set<String>
+        guard fileCount > 1 else { return tools(kind) }
         switch kind {
         case .image:
-            allowed = ["tool:crop", "tool:collage"]
+            return [
+                WheelItem(id: "tool:crop", title: "CROP", symbol: "crop"),
+                WheelItem(
+                    id: "tool:collage",
+                    title: "COLLAGE",
+                    symbol: "square.grid.2x2"
+                )
+            ]
         case .pdf:
-            allowed = ["tool:merge"]
+            return [
+                WheelItem(id: "tool:merge", title: "MERGE", symbol: "doc.on.doc")
+            ]
         default:
-            allowed = []
+            return []
         }
-        return all.filter { allowed.contains($0.id) }
     }
 
     /// Targets shared by every file in a selection, in the first kind's
@@ -358,11 +364,11 @@ public enum Capabilities {
     }
 
     public static let actions: [WheelItem] = [
-        WheelItem(id: "action:airdrop", title: "AIRDROP", symbol: "antenna.radiowaves.left.and.right"),
-        WheelItem(id: "action:float", title: "FLOAT", symbol: "macwindow.on.rectangle"),
+        WheelItem(id: "action:airdrop", title: "AIRDROP", symbol: "square.and.arrow.up"),
+        WheelItem(id: "action:float", title: "FLOAT", symbol: "pin"),
         WheelItem(id: "action:copy", title: "COPY", symbol: "doc.on.doc"),
         WheelItem(id: "action:move", title: "MOVE", symbol: "folder"),
-        WheelItem(id: "action:copypath", title: "COPY PATH", symbol: "link"),
+        WheelItem(id: "action:copypath", title: "COPY PATH", symbol: "doc.on.clipboard"),
         WheelItem(id: "action:terminal", title: "TERMINAL", symbol: "terminal")
     ]
 }

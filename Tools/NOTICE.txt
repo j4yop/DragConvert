@@ -1,0 +1,14 @@
+DragConvert bundles the following command-line image tools:
+
+- cwebp 1.6.0 (libwebp) — BSD-3-Clause
+  Source: https://chromium.googlesource.com/webm/libwebp
+  Binary: Homebrew bottle for macOS arm64, patched to load its libraries
+  from the same folder with @loader_path.
+
+- libpng 1.6.59 — libpng License
+  Source: http://www.libpng.org/pub/png/libpng.html
+
+- libjpeg-turbo 3.2.1 — BSD-style / IJG licenses
+  Source: https://github.com/libjpeg-turbo/libjpeg-turbo
+
+The corresponding license texts are in LICENSES/.

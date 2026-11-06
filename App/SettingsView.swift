@@ -31,10 +31,20 @@ final class SettingsModel: ObservableObject {
 struct SettingsView: View {
     @ObservedObject var model: SettingsModel
 
+    init(model: SettingsModel) {
+        self.model = model
+        var initial = "jpg"
+        if let index = CommandLine.arguments.firstIndex(of: "--format-demo"),
+           index + 1 < CommandLine.arguments.count {
+            initial = CommandLine.arguments[index + 1]
+        }
+        _selectedFormat = State(initialValue: initial)
+    }
+
     @AppStorage("wheelStyle") private var wheelStyle = WheelStyle.glass.rawValue
     @AppStorage("wheelConvertShortcut") private var convert = WheelShortcut.shift.rawValue
-    @AppStorage("wheelToolsShortcut") private var tools = WheelShortcut.command.rawValue
-    @AppStorage("wheelActionsShortcut") private var actions = WheelShortcut.control.rawValue
+    @AppStorage("wheelToolsShortcut") private var tools = WheelShortcut.optionCommand.rawValue
+    @AppStorage("wheelActionsShortcut") private var actions = WheelShortcut.controlCommand.rawValue
     @AppStorage("soundEnabled") private var sound = true
     @AppStorage("hapticsEnabled") private var haptics = true
     @AppStorage("revealOnFinish") private var reveal = true
@@ -49,9 +59,7 @@ struct SettingsView: View {
     // Formats
     @State private var search = ""
     @State private var selectedFormat = "jpg"
-    @State private var quality = "high"
-    @State private var preserveMetadata = true
-    @State private var compression = "custom"
+    @State private var profile = FormatProfileValues()
 
     private let accent = Color(red: 1.0, green: 0.322, blue: 0.0)
     private let panel = Color(white: 0.155)
@@ -62,8 +70,8 @@ struct SettingsView: View {
     }
 
     private var version: String {
-        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.6.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "7"
+        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.7.0"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "8"
         return "Version \(short) (\(build))"
     }
 
@@ -71,50 +79,54 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             tabBar
                 .padding(.top, 10)
-                .padding(.bottom, 8)
+                .padding(.bottom, 4)
 
-            ScrollView {
-                Group {
-                    switch model.tab {
-                    case .general:
-                        generalTab
-                    case .formats:
-                        formatsTab
-                    case .compatibility:
-                        compatibilityTab
-                    case .folders:
+            Group {
+                switch model.tab {
+                case .general:
+                    generalTab
+                case .formats:
+                    formatsTab
+                        .padding(.horizontal, 30)
+                        .padding(.top, 2)
+                        .padding(.bottom, 18)
+                case .compatibility:
+                    compatibilityTab
+                        .padding(.horizontal, 30)
+                        .padding(.top, 4)
+                        .padding(.bottom, 18)
+                case .folders:
+                    ScrollView {
                         foldersTab
-                    case .about:
-                        aboutTab
+                            .padding(.horizontal, 30)
+                            .padding(.top, 4)
+                            .padding(.bottom, 26)
                     }
+                    .scrollIndicators(.visible)
+                case .about:
+                    ScrollView {
+                        aboutTab
+                            .padding(.horizontal, 30)
+                            .padding(.top, 4)
+                            .padding(.bottom, 26)
+                    }
+                    .scrollIndicators(.visible)
                 }
-                .padding(.horizontal, 38)
-                .padding(.top, 4)
-                .padding(.bottom, 26)
             }
-            .scrollIndicators(.visible)
         }
         .frame(width: 478, height: 574)
         .background(Color(white: 0.112))
         .preferredColorScheme(.dark)
         .onAppear {
             refreshFolder()
+            loadProfile(for: selectedFormat)
         }
         .onChange(of: showMenuBar) { value in
             UserDefaults.standard.set(value, forKey: "showMenuBarIcon")
             NotificationCenter.default.post(name: .menuBarVisibilityChanged, object: value)
         }
-        .onChange(of: selectedFormat) { _ in
-            loadFormatSettings()
-        }
-        .onChange(of: quality) { value in
-            UserDefaults.standard.set(value, forKey: "formatQuality.\(selectedFormat)")
-        }
-        .onChange(of: preserveMetadata) { value in
-            UserDefaults.standard.set(value, forKey: "formatPreserve.\(selectedFormat)")
-        }
-        .onChange(of: compression) { value in
-            UserDefaults.standard.set(value, forKey: "formatCompression.\(selectedFormat)")
+        .onChange(of: selectedFormat) { value in
+            loadProfile(for: value)
         }
     }
 
@@ -139,22 +151,28 @@ struct SettingsView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.leading, 38)
+        .padding(.leading, 30)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - General
 
     private var generalTab: some View {
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 9) {
+                    Text("Appearance")
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.82))
             groupBox {
                 HStack(spacing: 12) {
                     Text("Style")
                         .font(.system(size: 13))
-                    Spacer(minLength: 8)
                     styleControl
+                        .frame(width: 112)
+                    Spacer(minLength: 8)
                 }
-                .frame(height: 32)
+                .frame(height: 25)
             }
 
             Text("General")
@@ -197,11 +215,18 @@ struct SettingsView: View {
                     "Float Behaviour",
                     selection: $floatBehavior,
                     options: ["Create a New Float", "Add to Existing Float"],
-                    width: 215
+                    width: 235
                 )
                 divider
                 terminalRow
             }
+
+                }
+                .padding(.horizontal, 30)
+                .padding(.top, 4)
+                .padding(.bottom, 10)
+            }
+            .scrollIndicators(.visible)
 
             HStack {
                 Spacer()
@@ -211,9 +236,11 @@ struct SettingsView: View {
                 .buttonStyle(.plain)
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(accent)
-                .padding(.trailing, 4)
+                .padding(.trailing, 30)
             }
-            .padding(.top, 2)
+            .frame(height: 30)
+            .padding(.bottom, 8)
+            .background(Color(white: 0.112))
         }
     }
 
@@ -237,14 +264,14 @@ struct SettingsView: View {
             }
         }
         .padding(3)
-        .frame(width: 220)
+        .frame(width: 112)
         .background(
             RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .fill(Color(white: 0.27))
         )
     }
 
-    private func checkRow(_ title: String, isOn: Binding<Bool>) -> some View {
+    private func checkRow(_ title: String, isOn: Binding<Bool>, fontSize: CGFloat = 13) -> some View {
         Button {
             isOn.wrappedValue.toggle()
         } label: {
@@ -260,11 +287,11 @@ struct SettingsView: View {
                     }
                 }
                 Text(title)
-                    .font(.system(size: 13))
+                    .font(.system(size: fontSize))
                     .foregroundStyle(Color.white.opacity(0.92))
                 Spacer(minLength: 8)
             }
-            .frame(height: 29)
+            .frame(height: 26)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -278,14 +305,16 @@ struct SettingsView: View {
             Spacer(minLength: 8)
             PopupControl(
                 title: WheelShortcut(rawValue: selection.wrappedValue)?.menuTitle ?? selection.wrappedValue,
-                width: 215,
+                width: 235,
                 options: WheelShortcut.allCases.map {
                     PopupOption(id: $0.rawValue, title: $0.menuTitle)
                 },
+                fontSize: 13,
+                background: Color(red: 0.24, green: 0.13, blue: 0.09),
                 onSelect: { selection.wrappedValue = $0 }
             )
         }
-        .frame(height: 30)
+        .frame(height: 28)
     }
 
     private func menuRow(
@@ -303,10 +332,12 @@ struct SettingsView: View {
                 title: selection.wrappedValue,
                 width: width,
                 options: options.map { PopupOption(id: $0, title: $0) },
+                fontSize: 13,
+                background: Color(red: 0.24, green: 0.13, blue: 0.09),
                 onSelect: { selection.wrappedValue = $0 }
             )
         }
-        .frame(height: 30)
+        .frame(height: 28)
     }
 
     private var terminalRow: some View {
@@ -324,10 +355,12 @@ struct SettingsView: View {
                 options: TerminalApps.installed.map {
                     PopupOption(id: $0.id, title: $0.name)
                 },
+                fontSize: 13,
+                background: Color(red: 0.24, green: 0.13, blue: 0.09),
                 onSelect: { terminal = $0 }
             )
         }
-        .frame(height: 30)
+        .frame(height: 28)
     }
 
     private var currentTerminalName: String {
@@ -336,273 +369,667 @@ struct SettingsView: View {
 
     // MARK: - Formats
 
-    private static let formats: [FormatInfo] = [
-        FormatInfo(id: "jpg", name: "JPG", description: "JPEG is a lossy image format. Best for photos and sharing.", lossy: true, settings: true),
-        FormatInfo(id: "png", name: "PNG", description: "PNG is lossless and supports transparency. Best for graphics and screenshots.", lossy: false, settings: true),
-        FormatInfo(id: "heic", name: "HEIC", description: "HEIC is an efficient modern image format for Apple devices.", lossy: true, settings: true),
-        FormatInfo(id: "tiff", name: "TIFF", description: "TIFF is a lossless, high-quality format for archiving and print.", lossy: false, settings: true),
-        FormatInfo(id: "bmp", name: "BMP", description: "BMP is an uncompressed bitmap for maximum compatibility.", lossy: false, settings: true),
-        FormatInfo(id: "avif", name: "AVIF", description: "AVIF is a modern image format with excellent compression.", lossy: true, settings: true),
-        FormatInfo(id: "webp", name: "WEBP", description: "WebP is a compact image format for the web.", lossy: true, settings: true),
-        FormatInfo(id: "pdf", name: "PDF", description: "PDF keeps pages, vectors and text together.", lossy: false, settings: false),
-        FormatInfo(id: "txt", name: "TXT", description: "Plain text extracted from a PDF.", lossy: false, settings: false),
-        FormatInfo(id: "md", name: "MD", description: "Markdown with structure extracted from a PDF.", lossy: false, settings: false)
-    ]
-
-    private var filteredFormats: [FormatInfo] {
+    private var filteredCategories: [(FormatCategory, [FormatSpec])] {
         let needle = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !needle.isEmpty else { return Self.formats }
-        return Self.formats.filter {
-            $0.name.lowercased().contains(needle) || $0.description.lowercased().contains(needle)
+        return FormatCategory.allCases.compactMap { category in
+            let items = FormatCatalog.inCategory(category).filter { format in
+                needle.isEmpty
+                    || format.name.lowercased().contains(needle)
+                    || format.description.lowercased().contains(needle)
+                    || format.extensions.contains { $0.contains(needle) }
+            }
+            return items.isEmpty ? nil : (category, items)
         }
     }
 
-    private var selectedFormatInfo: FormatInfo {
-        Self.formats.first(where: { $0.id == selectedFormat }) ?? Self.formats[0]
+    private var selectedFormatInfo: FormatSpec {
+        FormatCatalog.format(selectedFormat) ?? FormatCatalog.images[0]
     }
 
     private var formatsTab: some View {
-        HStack(alignment: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: 9) {
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.45))
-                    TextField("Search", text: $search)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12))
-                }
-                .padding(.horizontal, 8)
-                .frame(height: 26)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color(white: 0.085))
-                )
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 1) {
-                        ForEach(filteredFormats) { format in
-                            Button {
-                                selectedFormat = format.id
-                            } label: {
-                                Text(format.name)
-                                    .font(.system(size: 11.5, weight: selectedFormat == format.id ? .semibold : .regular))
-                                    .foregroundStyle(Color.white.opacity(selectedFormat == format.id ? 0.96 : 0.80))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 7)
-                                    .frame(height: 24)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                            .fill(selectedFormat == format.id ? Color.white.opacity(0.13) : Color.clear)
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-                .scrollIndicators(.hidden)
-            }
-            .frame(width: 148)
-
+        HStack(alignment: .top, spacing: 10) {
+            formatsSidebar
             Rectangle()
                 .fill(hairline)
                 .frame(width: 1)
-                .padding(.horizontal, 12)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(selectedFormatInfo.name)
-                        .font(.system(size: 18, weight: .semibold))
-                    Text(selectedFormatInfo.description)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.white.opacity(0.50))
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    if selectedFormatInfo.settings {
-                        Text("Conversion Settings")
-                            .font(.system(size: 11.5, weight: .semibold))
-                            .foregroundStyle(Color.white.opacity(0.84))
-                            .padding(.top, 6)
-
-                        groupBox {
-                            if selectedFormatInfo.lossy {
-                                HStack {
-                                    Text("Quality")
-                                        .font(.system(size: 13))
-                                    Spacer()
-                                    PopupControl(
-                                        title: QualityOption.title(for: quality),
-                                        width: 130,
-                                        options: QualityOption.all.map {
-                                            PopupOption(id: $0.id, title: $0.title)
-                                        },
-                                        onSelect: { quality = $0 }
-                                    )
-                                }
-                                .frame(height: 32)
-                                divider
-                            }
-                            checkRow("Preserve metadata", isOn: $preserveMetadata)
-                            divider
-                            HStack {
-                                Spacer()
-                                Button("Restore Defaults") {
-                                    quality = "high"
-                                    preserveMetadata = true
-                                    compression = "custom"
-                                }
-                                .buttonStyle(.plain)
-                                .font(.system(size: 11.5, weight: .medium))
-                                .foregroundStyle(accent)
-                            }
-                            .frame(height: 28)
-                        }
-
-                        if selectedFormatInfo.lossy {
-                            Text("Image Compression")
-                                .font(.system(size: 11.5, weight: .semibold))
-                                .foregroundStyle(Color.white.opacity(0.84))
-                                .padding(.top, 4)
-
-                            HStack(spacing: 0) {
-                                ForEach(CompressionOption.all) { option in
-                                    Button {
-                                        compression = option.id
-                                    } label: {
-                                        Text(option.title)
-                                            .font(.system(size: 9.5, weight: .medium))
-                                            .foregroundStyle(compression == option.id ? Color.white : Color.white.opacity(0.74))
-                                            .lineLimit(1)
-                                            .minimumScaleFactor(0.75)
-                                            .frame(width: 72, height: 24)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                                    .fill(compression == option.id ? accent : Color.clear)
-                                            )
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .padding(3)
-                            .background(
-                                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .fill(Color(white: 0.27))
-                            )
-
-                            Text("Custom keeps the encoder defaults. The presets trade quality for a smaller file.")
-                                .font(.system(size: 10))
-                                .foregroundStyle(Color.white.opacity(0.42))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    } else {
-                        Text("This output format has no adjustable conversion defaults.")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.white.opacity(0.50))
-                            .padding(.top, 10)
-                    }
-
-                    Spacer(minLength: 0)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .scrollIndicators(.visible)
+            formatDetail
         }
-        .frame(height: 470, alignment: .top)
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
-    private func loadFormatSettings() {
-        let defaults = UserDefaults.standard
-        quality = defaults.string(forKey: "formatQuality.\(selectedFormat)") ?? "high"
-        preserveMetadata = defaults.object(forKey: "formatPreserve.\(selectedFormat)") as? Bool ?? true
-        compression = defaults.string(forKey: "formatCompression.\(selectedFormat)") ?? "custom"
+    private var formatsSidebar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.42))
+                TextField("Search", text: $search)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 11.5))
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color(white: 0.075))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+            )
+
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(filteredCategories, id: \.0) { category, items in
+                            Text(category.title)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Color.white.opacity(0.36))
+                                .padding(.top, 9)
+                                .padding(.bottom, 3)
+                            ForEach(items) { format in
+                                Button {
+                                    selectedFormat = format.id
+                                } label: {
+                                    Text(format.name)
+                                        .font(.system(size: 12.5, weight: selectedFormat == format.id ? .semibold : .regular))
+                                        .foregroundStyle(Color.white.opacity(selectedFormat == format.id ? 0.96 : 0.78))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 8)
+                                        .frame(height: 26)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                                .fill(selectedFormat == format.id ? accent.opacity(0.24) : Color.clear)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                                .id(format.id)
+                            }
+                        }
+                    }
+                    .padding(.bottom, 8)
+                }
+                .scrollIndicators(.hidden)
+                .onAppear {
+                    DispatchQueue.main.async {
+                        proxy.scrollTo(selectedFormat, anchor: .center)
+                    }
+                }
+                .onChange(of: selectedFormat) { value in
+                    withAnimation(.easeOut(duration: 0.16)) {
+                        proxy.scrollTo(value, anchor: .center)
+                    }
+                }
+                .onChange(of: search) { _ in
+                    DispatchQueue.main.async {
+                        proxy.scrollTo(selectedFormat, anchor: .center)
+                    }
+                }
+            }
+        }
+        .frame(width: 114)
+    }
+
+    private var formatDetail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("\(selectedFormatInfo.name) Settings")
+                    .font(.system(size: 16.5, weight: .bold))
+                Text(selectedFormatInfo.description)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Color.white.opacity(0.48))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if selectedFormatInfo.settings.any {
+                    Text("Conversion Settings")
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.86))
+                        .padding(.top, 6)
+                    conversionSettings
+                }
+
+                if selectedFormatInfo.settings.videoCompression {
+                    Text("Compression Settings")
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.86))
+                        .padding(.top, 4)
+                    videoCompressionSettings
+                }
+
+                if selectedFormatInfo.settings.imageCompression {
+                    Text("Image Compression")
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.86))
+                        .padding(.top, 4)
+                    imageCompressionSettings
+                }
+
+                if !selectedFormatInfo.settings.any {
+                    Text("This output format has no adjustable conversion defaults.")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(Color.white.opacity(0.46))
+                        .padding(.top, 6)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .scrollIndicators(.visible)
+    }
+
+    private var conversionSettings: some View {
+        groupBox {
+            if selectedFormatInfo.settings.quality {
+                settingRow("Quality") {
+                    PopupControl(
+                        title: qualityTitle(profile.quality),
+                        width: 120,
+                        options: qualityOptions,
+                        onSelect: { profile.quality = $0; saveProfile() }
+                    )
+                }
+            }
+            if selectedFormatInfo.settings.metadata {
+                checkRow("Preserve metadata", isOn: bind(\.preserveMetadata))
+            }
+            if selectedFormatInfo.settings.pdfLayout {
+                settingRow("PDF layout") {
+                    PopupControl(
+                        title: pdfLayoutTitle(profile.pdfLayout),
+                        width: 180,
+                        options: pdfLayoutOptions,
+                        onSelect: { profile.pdfLayout = $0; saveProfile() }
+                    )
+                }
+                if selectedFormatInfo.category == .documents {
+                    Text(pdfLayoutCaption)
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(Color.white.opacity(0.42))
+                        .fixedSize(horizontal: false, vertical: true)
+                    if selectedFormatInfo.id == "pages" {
+                        Text("Creates a native Pages document directly on your Mac.")
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(Color.white.opacity(0.42))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if selectedFormatInfo.id == "epub" {
+                        Text("Creates a reflowable EPUB with chapters and inline images.")
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(Color.white.opacity(0.42))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            if selectedFormatInfo.settings.audioBitrate {
+                settingRow("Audio bitrate") {
+                    PopupControl(
+                        title: profile.audioBitrate,
+                        width: 130,
+                        options: bitrateOptions,
+                        onSelect: { profile.audioBitrate = $0; saveProfile() }
+                    )
+                }
+            }
+            if selectedFormatInfo.settings.audioDepth {
+                settingRow("Audio bit depth") {
+                    PopupControl(
+                        title: audioDepthTitle(profile.audioDepth),
+                        width: 170,
+                        options: audioDepthOptions,
+                        onSelect: { profile.audioDepth = $0; saveProfile() }
+                    )
+                }
+            }
+            if selectedFormatInfo.settings.videoQuality {
+                settingRow("Quality") {
+                    PopupControl(
+                        title: qualityTitle(profile.videoQuality),
+                        width: 130,
+                        options: qualityOptions,
+                        onSelect: { profile.videoQuality = $0; saveProfile() }
+                    )
+                }
+            }
+            if selectedFormatInfo.settings.videoHeight {
+                settingRow("Maximum video height") {
+                    PopupControl(
+                        title: videoHeightTitle(profile.videoMaxHeight),
+                        width: 120,
+                        options: videoHeightOptions,
+                        onSelect: { profile.videoMaxHeight = $0; saveProfile() }
+                    )
+                }
+            }
+            if selectedFormatInfo.settings.archiveCompression {
+                settingRow("Compression") {
+                    PopupControl(
+                        title: archiveTitle(profile.archiveCompression),
+                        width: 130,
+                        options: archiveOptions,
+                        onSelect: { profile.archiveCompression = $0; saveProfile() }
+                    )
+                }
+            }
+            if selectedFormatInfo.settings.gifOptions {
+                settingRow("Frame rate") {
+                    PopupControl(
+                        title: gifFrameTitle(profile.gifFrameRate),
+                        width: 130,
+                        options: gifFrameOptions,
+                        onSelect: { profile.gifFrameRate = $0; saveProfile() }
+                    )
+                }
+                settingRow("Maximum width") {
+                    PopupControl(
+                        title: gifWidthTitle(profile.gifMaxWidth),
+                        width: 160,
+                        options: gifWidthOptions,
+                        onSelect: { profile.gifMaxWidth = $0; saveProfile() }
+                    )
+                }
+            }
+            if selectedFormatInfo.settings.epubLayout {
+                settingRow("EPUB layout") {
+                    PopupControl(
+                        title: profile.epubLayout == "fixed" ? "Fixed layout" : "Adjustable text",
+                        width: 160,
+                        options: [
+                            PopupOption(id: "adjustable", title: "Adjustable text"),
+                            PopupOption(id: "fixed", title: "Fixed layout")
+                        ],
+                        onSelect: { profile.epubLayout = $0; saveProfile() }
+                    )
+                }
+            }
+            divider
+            restoreRow("Restore Defaults") {
+                resetConversionDefaults()
+            }
+        }
+    }
+
+    private var imageCompressionSettings: some View {
+        groupBox {
+            settingRow("Compression") {
+                compressionSegmented(
+                    selection: bind(\.imageCompression),
+                    options: [
+                        PopupOption(id: "balanced", title: "Balanced"),
+                        PopupOption(id: "strong", title: "Strong")
+                    ]
+                )
+            }
+            settingRow("Image size") {
+                PopupControl(
+                    title: imageSizeTitle(profile.imageSize),
+                    width: 180,
+                    options: imageSizeOptions,
+                    onSelect: { profile.imageSize = $0; saveProfile() }
+                )
+            }
+            divider
+            restoreRow("Restore Compression Defaults") {
+                profile.imageCompression = "balanced"
+                profile.imageSize = "original"
+                saveProfile()
+            }
+        }
+    }
+
+    private var videoCompressionSettings: some View {
+        groupBox {
+            HStack(spacing: 10) {
+                Text("Compression")
+                    .font(.system(size: 11.5))
+                Spacer(minLength: 8)
+                compressionSegmented(
+                    selection: bind(\.videoCompression),
+                    options: [
+                        PopupOption(id: "balanced", title: "Balanced"),
+                        PopupOption(id: "strong", title: "Strong")
+                    ]
+                )
+            }
+            .frame(minHeight: 30)
+            Text(profile.videoCompression == "strong"
+                 ? "Much smaller files with more visible quality loss."
+                 : "Better visual quality with moderate file-size savings.")
+                .font(.system(size: 9.5))
+                .foregroundStyle(Color.white.opacity(0.42))
+                .fixedSize(horizontal: false, vertical: true)
+            divider
+            restoreRow("Restore Compression Defaults") {
+                profile.videoCompression = "balanced"
+                saveProfile()
+            }
+        }
+    }
+
+    private func settingRow<Control: View>(_ title: String, @ViewBuilder control: () -> Control) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 11.5))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .foregroundStyle(Color.white.opacity(0.92))
+            Spacer(minLength: 8)
+            control()
+        }
+        .frame(minHeight: 30)
+    }
+
+    private func restoreRow(_ title: String, action: @escaping () -> Void) -> some View {
+        HStack {
+            Spacer()
+            Button(action: action) {
+                Text(title)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 9)
+                    .frame(height: 23)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(accent.opacity(0.13))
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(height: 28)
+    }
+
+    private func compressionSegmented(selection: Binding<String>, options: [PopupOption]) -> some View {
+        HStack(spacing: 0) {
+            ForEach(options) { option in
+                Button {
+                    selection.wrappedValue = option.id
+                } label: {
+                    Text(option.title)
+                        .font(.system(size: 9.5, weight: .medium))
+                        .foregroundStyle(selection.wrappedValue == option.id ? Color.white : Color.white.opacity(0.68))
+                        .frame(width: 64, height: 22)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4.5, style: .continuous)
+                                .fill(selection.wrappedValue == option.id ? accent : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(2.5)
+        .background(
+            RoundedRectangle(cornerRadius: 6.5, style: .continuous)
+                .fill(Color(white: 0.26))
+        )
+    }
+
+    private let qualityOptions = [
+        PopupOption(id: "smallerFile", title: "Smaller File"),
+        PopupOption(id: "balanced", title: "Balanced"),
+        PopupOption(id: "higherQuality", title: "Higher Quality")
+    ]
+    private let pdfLayoutOptions = [
+        PopupOption(id: "editable", title: "Editable paragraphs"),
+        PopupOption(id: "preservePages", title: "Preserve original pages")
+    ]
+    private let bitrateOptions = [
+        PopupOption(id: "128 kbps", title: "128 kbps"),
+        PopupOption(id: "192 kbps", title: "192 kbps"),
+        PopupOption(id: "256 kbps", title: "256 kbps"),
+        PopupOption(id: "320 kbps", title: "320 kbps")
+    ]
+    private let audioDepthOptions = [
+        PopupOption(id: "matchSource", title: "Match source"),
+        PopupOption(id: "16", title: "16-bit integer"),
+        PopupOption(id: "24", title: "24-bit integer"),
+        PopupOption(id: "32", title: "32-bit integer"),
+        PopupOption(id: "float32", title: "32-bit float")
+    ]
+    private let videoHeightOptions = [
+        PopupOption(id: "original", title: "Original"),
+        PopupOption(id: "2160", title: "2160p"),
+        PopupOption(id: "1080", title: "1080p"),
+        PopupOption(id: "720", title: "720p"),
+        PopupOption(id: "480", title: "480p")
+    ]
+    private let archiveOptions = [
+        PopupOption(id: "fast", title: "Faster"),
+        PopupOption(id: "balanced", title: "Balanced"),
+        PopupOption(id: "smallest", title: "Smallest File")
+    ]
+    private let imageSizeOptions = [
+        PopupOption(id: "original", title: "Keep original dimensions"),
+        PopupOption(id: "4096", title: "Long edge 4096 px"),
+        PopupOption(id: "2048", title: "Long edge 2048 px"),
+        PopupOption(id: "1024", title: "Long edge 1024 px"),
+        PopupOption(id: "50", title: "50%"),
+        PopupOption(id: "25", title: "25%")
+    ]
+    private let gifFrameOptions = [
+        PopupOption(id: "original", title: "Match source"),
+        PopupOption(id: "30", title: "30 fps"),
+        PopupOption(id: "15", title: "15 fps")
+    ]
+    private let gifWidthOptions = [
+        PopupOption(id: "original", title: "Keep original width"),
+        PopupOption(id: "1080", title: "1080 px"),
+        PopupOption(id: "720", title: "720 px"),
+        PopupOption(id: "480", title: "480 px")
+    ]
+
+    private func qualityTitle(_ id: String) -> String {
+        qualityOptions.first(where: { $0.id == id })?.title ?? "Balanced"
+    }
+    private func pdfLayoutTitle(_ id: String) -> String {
+        pdfLayoutOptions.first(where: { $0.id == id })?.title ?? "Editable paragraphs"
+    }
+    private func audioDepthTitle(_ id: String) -> String {
+        audioDepthOptions.first(where: { $0.id == id })?.title ?? "Match source"
+    }
+    private func videoHeightTitle(_ id: String) -> String {
+        videoHeightOptions.first(where: { $0.id == id })?.title ?? "Original"
+    }
+    private func archiveTitle(_ id: String) -> String {
+        archiveOptions.first(where: { $0.id == id })?.title ?? "Balanced"
+    }
+    private func gifFrameTitle(_ id: String) -> String {
+        gifFrameOptions.first(where: { $0.id == id })?.title ?? "Match source"
+    }
+    private func gifWidthTitle(_ id: String) -> String {
+        gifWidthOptions.first(where: { $0.id == id })?.title ?? "Keep original width"
+    }
+
+    private func imageSizeTitle(_ id: String) -> String {
+        imageSizeOptions.first(where: { $0.id == id })?.title ?? "Keep original dimensions"
+    }
+
+    private var pdfLayoutCaption: String {
+        if profile.pdfLayout == "preservePages" {
+            return "Keep every page as a sharp image, including tables, equations, and scanned content. Text cannot be edited."
+        }
+        return "Create normal paragraphs, headings, and tables that reflow when edited. Recognize scanned text with OCR. Keep illustrations as inline images."
+    }
+
+    private func loadProfile(for id: String) {
+        let d = UserDefaults.standard
+        let p = "conversionProfile.\(id)."
+        profile.quality = d.string(forKey: p + "quality") ?? "balanced"
+        profile.preserveMetadata = d.object(forKey: p + "preserveMetadata") as? Bool ?? true
+        profile.imageCompression = d.string(forKey: p + "imageCompressionStrength") ?? "balanced"
+        profile.imageSize = d.string(forKey: p + "imageSize") ?? "original"
+        profile.pdfLayout = d.string(forKey: p + "pdfOfficeLayout") ?? "editable"
+        profile.audioBitrate = d.string(forKey: p + "audioBitrate") ?? "256 kbps"
+        profile.audioDepth = d.string(forKey: p + "audioSampleDepth") ?? "matchSource"
+        profile.videoQuality = d.string(forKey: p + "videoQuality") ?? "balanced"
+        profile.videoMaxHeight = d.string(forKey: p + "videoMaxHeight") ?? "original"
+        profile.videoCompression = d.string(forKey: p + "videoCompressionStrength") ?? "balanced"
+        profile.archiveCompression = d.string(forKey: p + "compression") ?? "balanced"
+        profile.gifFrameRate = d.string(forKey: p + "gifFrameRate") ?? "original"
+        profile.gifMaxWidth = d.string(forKey: p + "gifMaxWidth") ?? "original"
+        profile.epubLayout = d.string(forKey: p + "epubLayout") ?? "editable"
+    }
+
+    private func saveProfile() {
+        let d = UserDefaults.standard
+        let p = "conversionProfile.\(selectedFormat)."
+        d.set(profile.quality, forKey: p + "quality")
+        d.set(profile.preserveMetadata, forKey: p + "preserveMetadata")
+        d.set(profile.imageCompression, forKey: p + "imageCompressionStrength")
+        d.set(profile.imageSize, forKey: p + "imageSize")
+        d.set(profile.pdfLayout, forKey: p + "pdfOfficeLayout")
+        d.set(profile.audioBitrate, forKey: p + "audioBitrate")
+        d.set(profile.audioDepth, forKey: p + "audioSampleDepth")
+        d.set(profile.videoQuality, forKey: p + "videoQuality")
+        d.set(profile.videoMaxHeight, forKey: p + "videoMaxHeight")
+        d.set(profile.videoCompression, forKey: p + "videoCompressionStrength")
+        d.set(profile.archiveCompression, forKey: p + "compression")
+        d.set(profile.gifFrameRate, forKey: p + "gifFrameRate")
+        d.set(profile.gifMaxWidth, forKey: p + "gifMaxWidth")
+        d.set(profile.epubLayout, forKey: p + "epubLayout")
+    }
+
+    private func bind<T>(_ keyPath: WritableKeyPath<FormatProfileValues, T>) -> Binding<T> {
+        Binding(
+            get: { profile[keyPath: keyPath] },
+            set: {
+                profile[keyPath: keyPath] = $0
+                saveProfile()
+            }
+        )
+    }
+
+    private func resetConversionDefaults() {
+        profile.quality = "balanced"
+        profile.preserveMetadata = true
+        profile.pdfLayout = "editable"
+        profile.audioBitrate = "256 kbps"
+        profile.audioDepth = "matchSource"
+        profile.videoQuality = "balanced"
+        profile.videoMaxHeight = "original"
+        profile.archiveCompression = "balanced"
+        profile.gifFrameRate = "original"
+        profile.gifMaxWidth = "original"
+        profile.epubLayout = "editable"
+        saveProfile()
     }
 
     // MARK: - Compatibility
 
-    private static let columns = ["JPG", "PNG", "HEIC", "TIFF", "BMP", "AVIF", "PDF"]
-    private static let imageRows = ["JPG", "PNG", "HEIC", "TIFF", "BMP", "AVIF", "WEBP"]
-
     private var compatibilityTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Input × output")
-                    .font(.system(size: 11.5, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.82))
+                HStack(spacing: 7) {
+                    Image(systemName: "tablecells")
+                        .font(.system(size: 12, weight: .medium))
+                    Text("Format Compatibility")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundStyle(Color.white.opacity(0.82))
 
-                compatibilitySection(
-                    "Images",
-                    rows: Self.imageRows,
-                    checked: { row in
-                        Self.columns.map { column in
-                            column == "PDF" || Self.columns.dropLast().contains(column)
-                        }
-                    }
-                )
+                ForEach(FormatCategory.allCases) { category in
+                    compatibilityCard(category)
+                }
 
-                compatibilitySection(
-                    "PDF",
-                    rows: ["PDF"],
-                    checked: { _ in
-                        ["JPG", "PNG", "TIFF", "BMP"].map { Self.columns.contains($0) }
-                    }
-                )
-
-                Text("Only conversions with a working engine are checked. Nothing is advertised until it can run on this Mac.")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.white.opacity(0.40))
+                Text("A dash means this build cannot write that pair. Checkmarks follow the format’s published output set.")
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(Color.white.opacity(0.34))
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
             }
+            .frame(width: 418, alignment: .leading)
         }
         .scrollIndicators(.visible)
-        .frame(height: 470, alignment: .top)
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
-    private func compatibilitySection(
-        _ title: String,
-        rows: [String],
-        checked: @escaping (String) -> [Bool]
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.system(size: 11.5, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.84))
-                .padding(.bottom, 2)
+    private func compatibilityCard(_ category: FormatCategory) -> some View {
+        let columns = FormatCatalog.matrixColumns[category] ?? []
+        let rows = FormatCatalog.inCategory(category)
+        let columnWidth: CGFloat = columns.count >= 10 ? 28 : (columns.count > 6 ? 42 : 110)
+        let labelWidth: CGFloat = columns.count >= 10 ? 46 : 48
 
-            HStack(spacing: 0) {
-                Text("")
-                    .frame(width: 58, alignment: .leading)
-                ForEach(Self.columns, id: \.self) { column in
-                    Text(column)
-                        .font(.system(size: 8.5, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.48))
-                        .frame(width: 40)
-                }
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+                Image(systemName: category.symbol)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.68))
+                    .frame(width: 16)
+                Text(category.title)
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.86))
             }
-            .frame(height: 18)
 
-            ForEach(rows, id: \.self) { row in
+            VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    Text(row)
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.88))
-                        .frame(width: 58, alignment: .leading)
-                    let marks = checked(row)
-                    ForEach(Array(Self.columns.enumerated()), id: \.offset) { index, _ in
-                        Group {
-                            if index < marks.count, marks[index] {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(Color.white.opacity(0.82))
-                            } else {
-                                Color.clear
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 7, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.28))
+                        .frame(width: labelWidth, alignment: .center)
+                    ForEach(columns, id: \.self) { column in
+                        Text(FormatCatalog.displayName(column))
+                            .font(.system(size: columns.count >= 10 ? 7.2 : 8.2, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.44))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .frame(width: columnWidth, height: 22)
+                            .overlay(alignment: .trailing) {
+                                Rectangle().fill(hairline).frame(width: 0.5)
+                            }
+                    }
+                }
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(hairline).frame(height: 0.5)
+                }
+
+                ForEach(rows) { row in
+                    HStack(spacing: 0) {
+                        Text(row.name)
+                            .font(.system(size: columns.count >= 10 ? 8.2 : 9.6, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.84))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+                            .frame(width: labelWidth, alignment: .leading)
+                            .padding(.leading, 5)
+                        ForEach(columns, id: \.self) { column in
+                            Group {
+                                if row.outputs.contains(column) {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 8.5, weight: .semibold))
+                                        .foregroundStyle(Color.white.opacity(0.80))
+                                } else {
+                                    Text("–")
+                                        .font(.system(size: 9))
+                                        .foregroundStyle(Color.white.opacity(0.22))
+                                }
+                            }
+                            .frame(width: columnWidth, height: 22)
+                            .overlay(alignment: .trailing) {
+                                Rectangle().fill(hairline).frame(width: 0.5)
                             }
                         }
-                        .frame(width: 40, height: 23)
+                    }
+                    .overlay(alignment: .bottom) {
+                        Rectangle().fill(hairline).frame(height: 0.5)
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color(white: 0.105))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
+        .padding(11)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color(white: 0.155))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .stroke(Color.white.opacity(0.055), lineWidth: 1)
+        )
     }
 
     // MARK: - Folders
@@ -701,12 +1128,23 @@ struct SettingsView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 4)
 
-            HStack(spacing: 12) {
-                linkButton("GitHub", "https://github.com/j4yop/DragConvert")
-                linkButton("Releases", "https://github.com/j4yop/DragConvert/releases")
-                linkButton("License", "https://github.com/j4yop/DragConvert/blob/main/LICENSE")
+            groupBox {
+                aboutLine("Formats", "7 families · 47 formats")
+                divider
+                aboutLine("Wheel", "7 conversions · 6 tools · 6 actions")
+                divider
+                aboutLine("Engines", "Images, PDF, subtitles and archives")
+                divider
+                HStack(spacing: 14) {
+                    linkButton("GitHub", "https://github.com/j4yop/DragConvert")
+                    linkButton("Releases", "https://github.com/j4yop/DragConvert/releases")
+                    linkButton("License", "https://github.com/j4yop/DragConvert/blob/main/LICENSE")
+                    Spacer()
+                }
+                .frame(height: 28)
             }
-            .padding(.top, 8)
+            .padding(.horizontal, 20)
+            .padding(.top, 6)
 
             Button("Show Welcome Tour") {
                 UserDefaults.standard.set(false, forKey: "hasSeenWelcome")
@@ -729,6 +1167,20 @@ struct SettingsView: View {
         .frame(height: 470, alignment: .top)
     }
 
+    private func aboutLine(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(label)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.82))
+                .frame(width: 58, alignment: .leading)
+            Text(value)
+                .font(.system(size: 10.5))
+                .foregroundStyle(Color.white.opacity(0.52))
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(minHeight: 27)
+    }
+
     private func linkButton(_ title: String, _ address: String) -> some View {
         Button(title) {
             guard let url = URL(string: address) else { return }
@@ -745,8 +1197,8 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             content()
         }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -823,7 +1275,25 @@ private struct PopupControl: View {
     let title: String
     let width: CGFloat
     let options: [PopupOption]
+    let fontSize: CGFloat
+    let background: Color
     let onSelect: (String) -> Void
+
+    init(
+        title: String,
+        width: CGFloat,
+        options: [PopupOption],
+        fontSize: CGFloat = 10.5,
+        background: Color = Color(white: 0.205),
+        onSelect: @escaping (String) -> Void
+    ) {
+        self.title = title
+        self.width = width
+        self.options = options
+        self.fontSize = fontSize
+        self.background = background
+        self.onSelect = onSelect
+    }
 
     @State private var target = PopupTarget()
 
@@ -849,7 +1319,7 @@ private struct PopupControl: View {
         } label: {
             HStack(spacing: 5) {
                 Text(title)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: fontSize, weight: .medium))
                     .foregroundColor(accent)
                     .lineLimit(1)
                 Spacer(minLength: 4)
@@ -861,7 +1331,7 @@ private struct PopupControl: View {
             .frame(width: width, height: 26)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color(white: 0.205))
+                    .fill(background)
             )
         }
         .buttonStyle(.plain)
