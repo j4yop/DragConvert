@@ -5,6 +5,8 @@ import JobCore
 import EngineKit
 import PDFEngine
 import ImageEngine
+import DocumentEngine
+import MediaEngine
 
 @main
 struct DragConvertApp {
@@ -40,9 +42,21 @@ struct DragConvertApp {
         let engine: Engine?
         switch FileKind.detect(input) {
         case .pdf:
-            engine = (target == "txt" || target == "md") ? PDFTextEngine() : PDFToImageEngine()
+            switch target.lowercased() {
+            case "txt", "md": engine = PDFTextEngine()
+            case "html", "rtf", "rtfd", "epub", "docx", "svg": engine = PDFDocumentEngine()
+            default: engine = PDFToImageEngine()
+            }
         case .image:
             engine = ImageConvertEngine()
+        case .document:
+            engine = DocumentConversionEngine()
+        case .spreadsheet:
+            engine = SpreadsheetEngine()
+        case .audio:
+            engine = AudioEngine()
+        case .video:
+            engine = VideoEngine()
         case .subtitle:
             engine = SubtitleEngine()
         case .archive:

@@ -233,7 +233,10 @@ public enum Capabilities {
         case .image:
             return ["jpg", "png", "webp", "heic", "tiff", "avif", "bmp", "pdf"]
         case .pdf:
-            return ["docx", "pages", "pptx", "xlsx", "jpg", "png", "tiff", "epub", "txt", "md"]
+            return [
+                "docx", "jpg", "png", "txt", "md", "epub", "html",
+                "rtf", "rtfd", "svg", "bmp", "tiff", "pages", "pptx", "xlsx"
+            ]
         case .document:
             return ["pdf", "docx", "pages", "txt", "md", "html", "epub", "rtf", "rtfd", "jpg", "png"]
         case .slides:
@@ -241,9 +244,9 @@ public enum Capabilities {
         case .spreadsheet:
             return ["xlsx", "xls", "ods", "csv", "tsv", "pdf"]
         case .audio:
-            return ["mp3", "m4a", "wav", "flac", "ogg", "opus", "aiff", "wma"]
+            return ["m4a", "wav", "flac", "aiff", "mp3", "ogg", "opus", "wma"]
         case .video:
-            return ["mp4", "mov", "mkv", "webm", "avi", "wmv", "gif", "mp3"]
+            return ["mp4", "mov", "m4v", "m4a", "gif", "mkv", "webm", "avi", "wmv", "mp3"]
         case .subtitle:
             return ["txt", "srt", "vtt"]
         case .archive:
@@ -273,7 +276,8 @@ public enum Capabilities {
                 ("Resize", "arrow.up.left.and.arrow.down.right"),
                 ("Rotate", "rotate.right"),
                 ("Redact", "eye.slash"),
-                ("Metadata", "tag")
+                ("Metadata", "tag"),
+                ("More", "ellipsis.circle")
             ])
         case .pdf:
             return make([
@@ -282,7 +286,8 @@ public enum Capabilities {
                 ("Split", "rectangle.split.2x1"),
                 ("Organize", "square.grid.2x2"),
                 ("PDF/A-2B", "checkmark.seal"),
-                ("Read QR", "qrcode")
+                ("Read QR", "qrcode"),
+                ("More", "ellipsis.circle")
             ])
         case .video:
             return make([
@@ -302,7 +307,11 @@ public enum Capabilities {
                 ("Bleep", "speaker.slash"),
                 ("Visualizer", "waveform.path.ecg")
             ])
-        case .document, .slides, .spreadsheet, .subtitle, .archive, .unknown:
+        case .archive:
+            return make([
+                ("Extract", "arrow.down.doc")
+            ])
+        case .document, .slides, .spreadsheet, .subtitle, .unknown:
             return []
         }
     }
@@ -325,6 +334,10 @@ public enum Capabilities {
             return [
                 WheelItem(id: "tool:merge", title: "MERGE", symbol: "doc.on.doc")
             ]
+        case .archive:
+            return [
+                WheelItem(id: "tool:extract", title: "EXTRACT", symbol: "arrow.down.doc")
+            ]
         default:
             return []
         }
@@ -334,8 +347,26 @@ public enum Capabilities {
     /// native order, excluding a format only when every input is already it.
     public static func convertItems(
         kinds: [FileKind],
-        inputExtensions: [String]
+        inputExtensions: [String],
+        isSupported: (String) -> Bool = { _ in true }
     ) -> [WheelItem] {
+        convertTargetList(
+            kinds: kinds,
+            inputExtensions: inputExtensions
+        )
+        .filter(isSupported)
+        .prefix(maxWedges)
+        .map { target in
+            WheelItem(id: "convert:\(target)", title: target.uppercased(), symbol: "")
+        }
+    }
+
+    /// Every conversion target shared by the selection, in the first kind's
+    /// native order and without the input's own format.
+    public static func convertTargetList(
+        kinds: [FileKind],
+        inputExtensions: [String]
+    ) -> [String] {
         guard kinds.first != nil else { return [] }
         let lists = kinds.map(convertTargets)
         guard var intersection = lists.first.map(Set.init) else { return [] }
@@ -344,13 +375,9 @@ public enum Capabilities {
         }
 
         let own = Set(inputExtensions.map(normalisedExtension))
-        let ordered = lists[0].filter { target in
+        return lists[0].filter { target in
             guard intersection.contains(target) else { return false }
             return !own.allSatisfy { $0 == target }
-        }
-
-        return Array(ordered.prefix(maxWedges)).map { target in
-            WheelItem(id: "convert:\(target)", title: target.uppercased(), symbol: "")
         }
     }
 

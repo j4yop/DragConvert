@@ -51,6 +51,9 @@ struct SettingsView: View {
     @AppStorage("showMenuBarIcon") private var showMenuBar = true
     @AppStorage("terminalBundleID") private var terminal = TerminalApps.selectedBundleID
     @AppStorage("floatBehavior") private var floatBehavior = "Create a New Float"
+    @AppStorage("checkForUpdatesAutomatically") private var autoUpdates = true
+
+    @ObservedObject private var updates = UpdateChecker.shared
 
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var folderPath = FolderAccess.shared.currentPath ?? ""
@@ -70,8 +73,8 @@ struct SettingsView: View {
     }
 
     private var version: String {
-        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.7.1"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "9"
+        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.8.0"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "10"
         return "Version \(short) (\(build))"
     }
 
@@ -1105,14 +1108,14 @@ struct SettingsView: View {
     // MARK: - About
 
     private var aboutTab: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
-                .frame(width: 76, height: 76)
-                .padding(.top, 14)
+                .frame(width: 64, height: 64)
+                .padding(.top, 10)
 
             Text("DragConvert")
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 19, weight: .semibold))
             Text(version)
                 .font(.system(size: 11))
                 .foregroundStyle(Color.white.opacity(0.55))
@@ -1125,15 +1128,15 @@ struct SettingsView: View {
                 .foregroundStyle(Color.white.opacity(0.50))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 24)
-                .padding(.top, 4)
+                .padding(.horizontal, 30)
+                .padding(.top, 1)
 
             groupBox {
                 aboutLine("Formats", "7 families · 47 formats")
                 divider
-                aboutLine("Wheel", "7 conversions · 6 tools · 6 actions")
+                aboutLine("Wheel", "Up to 7 conversions · 7 tools · 6 actions")
                 divider
-                aboutLine("Engines", "Images, PDF, subtitles and archives")
+                aboutLine("Engines", "Images, PDF, documents, sheets, media and archives")
                 divider
                 HStack(spacing: 14) {
                     linkButton("GitHub", "https://github.com/j4yop/DragConvert")
@@ -1144,7 +1147,10 @@ struct SettingsView: View {
                 .frame(height: 28)
             }
             .padding(.horizontal, 20)
-            .padding(.top, 6)
+            .padding(.top, 4)
+
+            updatesCard
+                .padding(.horizontal, 20)
 
             Button("Show Welcome Tour") {
                 UserDefaults.standard.set(false, forKey: "hasSeenWelcome")
@@ -1153,7 +1159,7 @@ struct SettingsView: View {
             .buttonStyle(.plain)
             .font(.system(size: 11.5, weight: .medium))
             .foregroundStyle(accent)
-            .padding(.top, 4)
+            .padding(.top, 2)
 
             Spacer(minLength: 0)
 
@@ -1161,10 +1167,137 @@ struct SettingsView: View {
                 .font(.system(size: 9.5))
                 .foregroundStyle(Color.white.opacity(0.30))
                 .multilineTextAlignment(.center)
-                .padding(.bottom, 8)
+                .padding(.bottom, 6)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 470, alignment: .top)
+        .frame(minHeight: 460, alignment: .top)
+    }
+
+    // MARK: - Updates
+
+    private var updatesCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Text("Updates")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.92))
+
+                Spacer()
+
+                Text(updateStatusLabel)
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundStyle(updateStatusTint)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2.5)
+                    .background(
+                        Capsule()
+                            .fill(updateStatusTint.opacity(0.13))
+                    )
+            }
+            .padding(.bottom, 8)
+
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(updateStatusTint)
+                    .frame(width: 6, height: 6)
+
+                Text(updateStatusText)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Color.white.opacity(0.62))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 8)
+
+                if case .available(_, let url) = updates.state {
+                    Button("View Release") {
+                        NSWorkspace.shared.open(url)
+                    }
+                    .buttonStyle(UpdateButtonStyle(accent: accent, prominent: true))
+                }
+
+                Button(updates.state == .checking ? "Checking…" : "Check Again") {
+                    updates.check()
+                }
+                .buttonStyle(UpdateButtonStyle(accent: accent, prominent: false))
+                .disabled(updates.state == .checking)
+            }
+
+            divider
+
+            Toggle(isOn: $autoUpdates) {
+                Text("Check for updates automatically")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Color.white.opacity(0.72))
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .tint(accent)
+            .onChange(of: autoUpdates) { value in
+                updates.setAutomatic(value)
+            }
+            .frame(height: 24)
+
+            Text("Checks github.com on launch and once a day. No account or tracking.")
+                .font(.system(size: 9.5))
+                .foregroundStyle(Color.white.opacity(0.36))
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(panel)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .stroke(Color.white.opacity(0.055), lineWidth: 1)
+        )
+    }
+
+    private var updateStatusLabel: String {
+        switch updates.state {
+        case .idle: return autoUpdates ? "READY" : "MANUAL"
+        case .checking: return "CHECKING"
+        case .upToDate: return "UP TO DATE"
+        case .available: return "UPDATE"
+        case .failed: return "OFFLINE"
+        }
+    }
+
+    private var updateStatusText: String {
+        switch updates.state {
+        case .idle:
+            if !autoUpdates {
+                return "Automatic checks are off. Use Check Again when you want one."
+            }
+            if let last = updates.lastChecked {
+                let relative = RelativeDateTimeFormatter()
+                relative.unitsStyle = .full
+                return "Last checked \(relative.localizedString(for: last, relativeTo: Date()))."
+            }
+            return "Updates are checked on launch and once a day."
+        case .checking:
+            return "Looking for a newer release on GitHub…"
+        case .upToDate:
+            return "DragConvert \(UpdateChecker.currentVersion) is the latest version."
+        case .available(let version, _):
+            return "Version \(version) is available on GitHub Releases."
+        case .failed(let message):
+            return message
+        }
+    }
+
+    private var updateStatusTint: Color {
+        switch updates.state {
+        case .idle: return Color.white.opacity(0.45)
+        case .checking: return Color(red: 0.45, green: 0.65, blue: 1.0)
+        case .upToDate: return Color(red: 0.35, green: 0.82, blue: 0.52)
+        case .available: return accent
+        case .failed: return Color(red: 1.0, green: 0.45, blue: 0.38)
+        }
     }
 
     private func aboutLine(_ label: String, _ value: String) -> some View {
@@ -1215,6 +1348,26 @@ struct SettingsView: View {
             .fill(hairline)
             .frame(height: 1)
             .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Update button style
+
+private struct UpdateButtonStyle: ButtonStyle {
+    let accent: Color
+    let prominent: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 9.5, weight: .semibold))
+            .foregroundStyle(prominent ? Color.white : Color.white.opacity(0.72))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(prominent ? accent : Color.white.opacity(configuration.isPressed ? 0.14 : 0.075))
+            )
+            .opacity(configuration.isPressed ? 0.78 : 1)
     }
 }
 

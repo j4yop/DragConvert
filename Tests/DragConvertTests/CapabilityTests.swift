@@ -122,7 +122,10 @@ final class CapabilityTests: XCTestCase {
             kinds: [.image, .pdf],
             inputExtensions: ["png", "pdf"]
         )
-        XCTAssertEqual(items.map(\.id), ["convert:jpg", "convert:png", "convert:tiff"])
+        XCTAssertEqual(
+            items.map(\.id),
+            ["convert:jpg", "convert:png", "convert:tiff", "convert:bmp"]
+        )
     }
 
     func testMultiFileToolsAreTruthful() {

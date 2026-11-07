@@ -14,7 +14,9 @@ let package = Package(
         .package(path: "Packages/JobCore"),
         .package(path: "Packages/EngineKit"),
         .package(path: "Packages/Engines/PDFEngine"),
-        .package(path: "Packages/Engines/ImageEngine")
+        .package(path: "Packages/Engines/ImageEngine"),
+        .package(path: "Packages/Engines/DocumentEngine"),
+        .package(path: "Packages/Engines/MediaEngine")
     ],
     targets: [
         .executableTarget(
@@ -26,7 +28,9 @@ let package = Package(
                 .product(name: "JobCore", package: "JobCore"),
                 .product(name: "EngineKit", package: "EngineKit"),
                 .product(name: "PDFEngine", package: "PDFEngine"),
-                .product(name: "ImageEngine", package: "ImageEngine")
+                .product(name: "ImageEngine", package: "ImageEngine"),
+                .product(name: "DocumentEngine", package: "DocumentEngine"),
+                .product(name: "MediaEngine", package: "MediaEngine")
             ],
             path: "App"
         ),
@@ -36,7 +40,9 @@ let package = Package(
                 .product(name: "CapabilityGraph", package: "CapabilityGraph"),
                 .product(name: "JobCore", package: "JobCore"),
                 .product(name: "ImageEngine", package: "ImageEngine"),
-                .product(name: "PDFEngine", package: "PDFEngine")
+                .product(name: "PDFEngine", package: "PDFEngine"),
+                .product(name: "DocumentEngine", package: "DocumentEngine"),
+                .product(name: "MediaEngine", package: "MediaEngine")
             ],
             path: "Tests/DragConvertTests"
         )

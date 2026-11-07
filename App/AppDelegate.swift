@@ -8,6 +8,8 @@ import JobCore
 import EngineKit
 import PDFEngine
 import ImageEngine
+import DocumentEngine
+import MediaEngine
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -52,6 +54,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var photoEditorWindow: PhotoEditorWindowController?
     private var qrWindow: QRResultWindowController?
     private var qrTask: Task<Void, Never>?
+    private var moreToolsWindow: MoreToolsWindowController?
+    private var moreFormatsWindow: MoreFormatsWindowController?
+    private var extractTask: Task<Void, Never>?
     private var pdfaTask: Task<Void, Never>?
     private var metadataWindow: MetadataWindowController?
     private var metadataTask: Task<Void, Never>?
@@ -71,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "hapticsEnabled": true
         ])
         WheelShortcuts.migrateLegacyDefaults()
+        UpdateChecker.shared.start()
 
         // Re-activate the home-folder security-scoped bookmark at launch.
         // Dragging a file grants read access to that file, but writing the
@@ -180,6 +186,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            CommandLine.arguments.count > index + 1 {
             let path = CommandLine.arguments[index + 1]
             presentCrop(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--moretools-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentMoreTools(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--moreformats-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            presentMoreFormats(for: [URL(fileURLWithPath: path)])
+        }
+
+        if let index = CommandLine.arguments.firstIndex(of: "--extract-demo"),
+           CommandLine.arguments.count > index + 1 {
+            let path = CommandLine.arguments[index + 1]
+            runExtractArchives([URL(fileURLWithPath: path)])
         }
 
         if let index = CommandLine.arguments.firstIndex(of: "--annotate-demo"),
@@ -420,29 +444,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return Capabilities.actions
 
         case .convert:
-            let kinds = files.map(FileKind.detect)
-            guard !kinds.contains(.unknown), !kinds.isEmpty else { return [] }
-            return Capabilities.convertItems(
-                kinds: kinds,
-                inputExtensions: files.map(\.pathExtension)
-            ).filter { item in
-                guard item.id.hasPrefix("convert:") else { return false }
-                let target = String(item.id.dropFirst("convert:".count))
-                return files.allSatisfy { file in
-                    guard let engine = engine(for: file, target: target) else { return false }
-                    return engine.canHandle(
-                        Job(inputs: [file], operation: .convert(to: target))
-                    )
-                }
+            let targets = supportedConversionTargets(for: files)
+            let visible = targets.count > 7
+                ? Array(targets.prefix(6))
+                : targets
+            var items = visible.map { target in
+                WheelItem(
+                    id: "convert:\(target)",
+                    title: target.uppercased(),
+                    symbol: ""
+                )
             }
+            if targets.count > 7 {
+                items.append(
+                    WheelItem(id: "convert:more", title: "MORE", symbol: "ellipsis.circle")
+                )
+            }
+            return items
 
         case .tools:
             let kinds = Array(Set(files.map(FileKind.detect)))
             guard kinds.count == 1,
                   let kind = kinds.first,
-                  kind == .image || kind == .pdf else { return [] }
+                  [.image, .pdf, .archive].contains(kind) else { return [] }
             return Capabilities.tools(kind, fileCount: files.count).filter {
                 supportedTool($0, kind: kind, files: files)
+            }
+        }
+    }
+
+    private func supportedConversionTargets(for files: [URL]) -> [String] {
+        let kinds = files.map(FileKind.detect)
+        guard !kinds.contains(.unknown), !kinds.isEmpty else { return [] }
+        return Capabilities.convertTargetList(
+            kinds: kinds,
+            inputExtensions: files.map(\.pathExtension)
+        ).filter { target in
+            files.allSatisfy { file in
+                guard let engine = engine(for: file, target: target) else { return false }
+                return engine.canHandle(
+                    Job(inputs: [file], operation: .convert(to: target))
+                )
             }
         }
     }
@@ -451,12 +493,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let imageTools: Set<String> = [
             "tool:compress", "tool:crop", "tool:resize", "tool:rotate",
             "tool:annotate", "tool:addbg", "tool:redact", "tool:removebg",
-            "tool:metadata", "tool:collage", "tool:readqr", "tool:edit"
+            "tool:metadata", "tool:collage", "tool:readqr", "tool:edit",
+            "tool:more"
         ]
         let pdfTools: Set<String> = [
             "tool:compress", "tool:metadata", "tool:split",
-            "tool:organize", "tool:pdfa", "tool:readqr", "tool:merge"
+            "tool:organize", "tool:pdfa", "tool:readqr", "tool:merge",
+            "tool:annotate", "tool:redact", "tool:addbg", "tool:crop",
+            "tool:more"
         ]
+        let archiveTools: Set<String> = ["tool:extract"]
 
         switch kind {
         case .image:
@@ -469,6 +515,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard pdfTools.contains(item.id) else { return false }
             if files.count > 1 { return item.id == "tool:merge" }
             return true
+        case .archive:
+            return archiveTools.contains(item.id)
         default:
             return false
         }
@@ -476,17 +524,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func unsupportedMessage(mode: WheelMode, kinds: [FileKind]) -> String {
         if kinds.contains(.video) {
-            return "Audio and video conversions are the next family."
+            return mode == .tools
+                ? "Video editing tools aren’t built yet. Hold ⇧ for video conversions."
+                : "This video container isn’t readable by macOS. Try MP4, MOV or M4V."
         }
         if kinds.contains(.slides) {
             return "Presentation conversion is the next family."
         }
         if kinds.contains(.audio) {
-            return "Audio tools and conversions are the next family."
+            return mode == .tools
+                ? "Audio tools aren’t built yet. Hold ⇧ for audio conversions."
+                : "This audio format isn’t readable by macOS. Try MP3, M4A, WAV, FLAC or AIFF."
         }
-        if kinds.contains(.document) || kinds.contains(.spreadsheet)
-            || kinds.contains(.subtitle) || kinds.contains(.archive) {
-            return "This family is on the roadmap. File actions still work with Control."
+        if kinds.contains(.document) || kinds.contains(.spreadsheet) {
+            return "Hold ⇧ for document and spreadsheet conversions."
+        }
+        if kinds.contains(.archive) {
+            return "RAR and 7-Zip are extract-only. Hold ⌥⌘ for the tools wheel."
         }
         return "No \(mode.rawValue) wedges for this file yet."
     }
@@ -607,6 +661,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        if item.id == "tool:more" {
+            presentMoreTools(for: urls)
+            return
+        }
+
+        if item.id == "tool:extract" {
+            runExtractArchives(urls)
+            return
+        }
+
         if item.id == "tool:crop" {
             presentCrop(for: urls)
             return
@@ -699,6 +763,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if item.id == "tool:redact" {
             presentRedact(for: urls)
+            return
+        }
+
+        if item.id == "convert:more" {
+            presentMoreFormats(for: urls)
             return
         }
 
@@ -930,8 +999,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func checkForUpdates() {
-        guard let url = URL(string: "https://github.com/j4yop/DragConvert/releases") else { return }
-        NSWorkspace.shared.open(url)
+        presentSettings(tab: .about)
+        UpdateChecker.shared.check()
     }
 
     @objc private func showSettings() {
@@ -963,18 +1032,145 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func engine(for input: URL, target: String? = nil) -> Engine? {
         switch FileKind.detect(input) {
         case .pdf:
-            if let target = target?.lowercased(), target == "txt" || target == "md" {
+            switch target?.lowercased() {
+            case "txt", "md":
                 return PDFTextEngine()
+            case "html", "rtf", "rtfd", "epub", "docx", "svg":
+                return PDFDocumentEngine()
+            default:
+                return PDFToImageEngine()
             }
-            return PDFToImageEngine()
         case .image:
             return ImageConvertEngine()
+        case .document:
+            return DocumentConversionEngine()
+        case .spreadsheet:
+            return SpreadsheetEngine()
+        case .audio:
+            return AudioEngine()
+        case .video:
+            return VideoEngine()
         case .subtitle:
             return SubtitleEngine()
         case .archive:
             return ArchiveEngine()
         default:
             return nil
+        }
+    }
+
+    // MARK: More tools
+
+    private func presentMoreTools(for urls: [URL]) {
+        guard let input = urls.first else { return }
+        let kind = FileKind.detect(input)
+        guard kind == .image || kind == .pdf else {
+            hud.fail("More tools are available for images and PDFs")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+
+        let controller = MoreToolsWindowController(
+            kind: kind,
+            sourceName: input.lastPathComponent
+        ) { [weak self] id in
+            guard let self else { return }
+            self.moreToolsWindow?.close()
+            self.perform(
+                item: WheelItem(id: id, title: id, symbol: ""),
+                on: urls
+            )
+        }
+        moreToolsWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func presentMoreFormats(for urls: [URL]) {
+        guard let input = urls.first else { return }
+        let targets = supportedConversionTargets(for: urls)
+        let remaining = Array(targets.dropFirst(6))
+        guard !remaining.isEmpty else {
+            hud.fail("No extra formats for this file")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+
+        let controller = MoreFormatsWindowController(
+            targets: remaining,
+            sourceName: input.lastPathComponent
+        ) { [weak self] id in
+            guard let self else { return }
+            self.moreFormatsWindow?.close()
+            self.perform(
+                item: WheelItem(id: id, title: id, symbol: ""),
+                on: urls
+            )
+        }
+        moreFormatsWindow = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: Archive extraction
+
+    private func runExtractArchives(_ urls: [URL]) {
+        let supported = Set(["zip", "tar", "gz", "gzip", "rar", "7z"])
+        let archives = urls.filter {
+            FileKind.detect($0) == .archive
+                && supported.contains($0.pathExtension.lowercased())
+        }
+        guard !archives.isEmpty else {
+            hud.fail("Select a ZIP, TAR, GZIP, RAR or 7-Zip archive")
+            return
+        }
+        _ = FolderAccess.shared.ensureAccess()
+
+        hud.onCancel = { [weak self] in self?.extractTask?.cancel() }
+        hud.show(
+            title: "Extracting archive",
+            subtitle: archives.count == 1
+                ? archives[0].lastPathComponent
+                : "1 of \(archives.count)"
+        )
+
+        extractTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            var outputs: [URL] = []
+            for (index, input) in archives.enumerated() {
+                if Task.isCancelled {
+                    self.hud.hide()
+                    return
+                }
+                if archives.count > 1 {
+                    self.hud.update(subtitle: "\(index + 1) of \(archives.count)")
+                }
+                do {
+                    let folder = try await Task.detached(priority: .userInitiated) {
+                        try ArchiveEngine.extractArchive(input)
+                    }.value
+                    outputs.append(folder)
+                } catch is CancellationError {
+                    self.hud.hide()
+                    return
+                } catch {
+                    self.hud.fail(error.friendlyMessage)
+                    Log.write("extract failed \(input.path): \(error.localizedDescription)")
+                    return
+                }
+            }
+            guard !Task.isCancelled else {
+                self.hud.hide()
+                return
+            }
+            self.finished(outputs)
+            self.hud.succeed(
+                title: "Archive extracted",
+                subtitle: outputs.count == 1
+                    ? outputs[0].lastPathComponent
+                    : "\(outputs.count) folders"
+            )
+            Log.write("extracted \(outputs.map(\.path))")
         }
     }
 

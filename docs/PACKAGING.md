@@ -63,10 +63,10 @@ brew trust j4yop/tap && brew install --cask j4yop/tap/dragconvert
 
 - **App icon:** `Config/AppIcon.icns`, generated from `Config/AppIcon-1024.png` by `scripts/make-icon.swift`. The bundle script copies it into `Contents/Resources`.
 - **Menu-bar template icon:** drawn in code by `App/StatusIcon.swift`; macOS tints it for light/dark menu bars and the busy state uses the accent colour.
-- **About / privacy / licences:** `About DragConvert` in the menu bar shows the version, the GPL-3.0 licence, the local-only privacy statement, and links to the GitHub repository, releases and licence.
-- **Update path:** `Check for Updates…` opens the GitHub releases page in the browser. This keeps the app itself free of a network entitlement. If we later add Sparkle or App Store updates, update this section and the privacy copy together.
+- **About / privacy / licences:** `About DragConvert` in the menu bar shows the version, the GPL-3.0 licence, the privacy statement, update status, and links to the GitHub repository, releases and licence.
+- **Update path:** the About tab checks `api.github.com` for the latest GitHub release on launch and once a day. The toggle can disable it, and **Check Again** is always manual. No account, identifier or telemetry is sent. The app therefore declares the `com.apple.security.network.client` entitlement; keep the privacy copy in step with that.
 - **Version:** `Config/Info.plist` (`CFBundleShortVersionString`, `CFBundleVersion`). Bump both for every user-visible release.
-- **Sandbox:** `Config/DragConvert.entitlements` has app sandbox, user-selected read/write and app-scoped bookmarks. No network entitlement.
+- **Sandbox:** `Config/DragConvert.entitlements` has app sandbox, user-selected read/write, app-scoped bookmarks and the network client entitlement used only for the GitHub release check.
 
 ## Notarization (Developer ID)
 
@@ -96,7 +96,7 @@ The project already uses App Sandbox and user-selected file access, which is the
 2. Set the team and bundle identifier `com.dragconvert.app`.
 3. Add a 1024×1024 App Store icon (the same artwork is fine).
 4. Add the privacy policy URL and support URL.
-5. Declare **Data Not Collected** in App Privacy. The app has no analytics, account, telemetry or network entitlement.
+5. Declare **Data Not Collected** in App Privacy. The app has no analytics, account or telemetry; the only request is an unauthenticated GitHub release check.
 6. The app already includes `Config/PrivacyInfo.xcprivacy` (no tracking, no collected data, no accessed-API declarations). Keep it in the target resources.
 7. Archive, upload, and use TestFlight before release.
 

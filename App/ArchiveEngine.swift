@@ -34,11 +34,43 @@ struct ArchiveEngine: Engine {
         return [output]
     }
 
+    /// Extracts an archive beside itself into a new folder and returns that
+    /// folder. Supports ZIP, TAR, GZIP, RAR and 7-Zip through the system
+    /// libarchive-backed `bsdtar`; RAR creation is deliberately not offered.
+    static func extractArchive(_ input: URL) throws -> URL {
+        let destination = extractionDestination(for: input)
+        try FileManager.default.createDirectory(
+            at: destination,
+            withIntermediateDirectories: true
+        )
+        do {
+            try extract(input, to: destination)
+        } catch {
+            try? FileManager.default.removeItem(at: destination)
+            throw error
+        }
+        return destination
+    }
+
+    static func extractionDestination(for input: URL) -> URL {
+        let directory = input.deletingLastPathComponent()
+        let base = input.deletingPathExtension().lastPathComponent
+        var candidate = directory.appendingPathComponent(base, isDirectory: true)
+        var index = 2
+        while FileManager.default.fileExists(atPath: candidate.path) {
+            candidate = directory.appendingPathComponent("\(base) \(index)", isDirectory: true)
+            index += 1
+        }
+        return candidate
+    }
+
     private static func extract(_ input: URL, to directory: URL) throws {
         switch input.pathExtension.lowercased() {
         case "zip":
+            try validateEntries(input)
             try run("/usr/bin/ditto", ["-x", "-k", input.path, directory.path])
         case "tar":
+            try validateEntries(input)
             try run("/usr/bin/tar", ["-xf", input.path, "-C", directory.path])
         case "gz":
             let data = try pipe("/usr/bin/gzip", ["-dc", input.path])
@@ -49,8 +81,31 @@ struct ArchiveEngine: Engine {
                 try run("/usr/bin/tar", ["-xf", file.path, "-C", directory.path])
                 try? FileManager.default.removeItem(at: file)
             }
+        case "rar", "7z":
+            try validateEntries(input)
+            try run(
+                "/usr/bin/bsdtar",
+                ["-xf", input.path, "-C", directory.path, "--no-same-owner"]
+            )
         default:
             throw EngineError.unsupported(input.pathExtension)
+        }
+    }
+
+    /// Reject absolute and parent-relative entries before extracting. libarchive
+    /// usually blocks these itself, but a failed preflight gives a clear error.
+    private static func validateEntries(_ input: URL) throws {
+        let listing = try pipe("/usr/bin/bsdtar", ["-tf", input.path])
+        guard let text = String(data: listing, encoding: .utf8) else {
+            throw EngineError.corruptInput(input.lastPathComponent)
+        }
+        for line in text.split(separator: "\n", omittingEmptySubsequences: true) {
+            let path = String(line)
+            if path.hasPrefix("/") || path.split(separator: "/").contains("..") {
+                throw EngineError.corruptInput(
+                    "\(input.lastPathComponent) contains an unsafe path"
+                )
+            }
         }
     }
 

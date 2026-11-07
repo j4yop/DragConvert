@@ -1,8 +1,6 @@
 import AppKit
-import CoreGraphics
 import Foundation
 import PDFKit
-import Vision
 import JobCore
 import EngineKit
 
@@ -38,7 +36,7 @@ public struct PDFTextEngine: Engine {
         var pages: [String] = []
         for index in 0..<document.pageCount {
             if Task.isCancelled { throw CancellationError() }
-            pages.append(pageText(document.page(at: index)))
+            pages.append(PDFTextExtractor.text(document.page(at: index), ocrDPI: ocrDPI))
             progress(Double(index + 1) / Double(document.pageCount))
         }
 
@@ -63,77 +61,5 @@ public struct PDFTextEngine: Engine {
             try data.write(to: tmp, options: .atomic)
         }
         return [output]
-    }
-
-    private func pageText(_ page: PDFPage?) -> String {
-        guard let page else { return "" }
-
-        if let selectable = page.string?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !selectable.isEmpty {
-            return selectable
-        }
-
-        guard let image = rasterise(page) else {
-            return page.string ?? ""
-        }
-        return recognise(image) ?? (page.string ?? "")
-    }
-
-    private func rasterise(_ page: PDFPage) -> CGImage? {
-        let bounds = page.bounds(for: .mediaBox)
-        let scale = ocrDPI / 72
-        let width = max(1, Int((bounds.width * scale).rounded()))
-        let height = max(1, Int((bounds.height * scale).rounded()))
-
-        guard let context = CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
-        ) else { return nil }
-
-        context.setFillColor(NSColor.white.cgColor)
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        context.saveGState()
-        context.scaleBy(x: scale, y: scale)
-        page.draw(with: .mediaBox, to: context)
-        context.restoreGState()
-        return context.makeImage()
-    }
-
-    private func recognise(_ image: CGImage) -> String? {
-        let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .fast
-        request.usesLanguageCorrection = false
-
-        let handler = VNImageRequestHandler(cgImage: image, options: [:])
-        do {
-            try handler.perform([request])
-        } catch {
-            Log.engine("pdf ocr failed: \(error.localizedDescription)")
-            return nil
-        }
-
-        let observations = (request.results ?? []).sorted { left, right in
-            if abs(left.boundingBox.maxY - right.boundingBox.maxY) > 0.01 {
-                return left.boundingBox.maxY > right.boundingBox.maxY
-            }
-            return left.boundingBox.minX < right.boundingBox.minX
-        }
-
-        let lines = observations.compactMap { observation in
-            observation.topCandidates(1).first?.string
-        }
-        let text = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-        return text.isEmpty ? nil : text
-    }
-}
-
-private enum Log {
-    static func engine(_ message: String) {
-        NSLog("[dragconvert] \(message)")
     }
 }

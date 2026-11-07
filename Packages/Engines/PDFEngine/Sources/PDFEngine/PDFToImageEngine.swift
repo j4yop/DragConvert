@@ -108,6 +108,7 @@ public struct PDFToImageEngine: Engine {
         case "jpg", "jpeg": return .jpeg
         case "png": return .png
         case "tif", "tiff": return .tiff
+        case "bmp": return .bmp
         default: return nil
         }
     }

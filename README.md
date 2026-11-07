@@ -14,7 +14,7 @@
   <a href="https://apple.com/macos"><img src="https://img.shields.io/badge/macOS-13.0%2B-black.svg?style=flat-square&logo=apple" alt="macOS 13+" /></a>
   <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-6.0-orange.svg?style=flat-square&logo=swift" alt="Swift 6" /></a>
   <a href="#"><img src="https://img.shields.io/badge/architecture-Universal%20(M--series%20%2B%20Intel)-6f42c1.svg?style=flat-square" alt="Universal Binary" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/privacy-100%25%20Offline%20(No%20Network)-success.svg?style=flat-square" alt="Offline & Private" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/privacy-No%20uploads%20%C2%B7%20No%20tracking-success.svg?style=flat-square" alt="No Uploads or Tracking" /></a>
   <a href="#"><img src="https://img.shields.io/badge/price-Free%20Forever-brightgreen.svg?style=flat-square" alt="Free Forever" /></a>
 </p>
 
@@ -114,7 +114,7 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 * **File Header + Format Capsule**: The dragged file icon and name sit above the wheel; the centre capsule shows the target format as you move.
 * **Non-Activating Floating Panel**: Never steals frontmost focus or interrupts your active workspace.
 * **Atomic Writes & Collision Protection**: Writes via temporary files (`.<UUID>.tmp`) before swapping. Automatically uses smart collision naming (`sample 2.jpg`) so your original files are never overwritten.
-* **Uncompromising Privacy**: Sandboxed with zero network entitlements. No phone-home telemetry, no analytics, no external servers.
+* **Uncompromising Privacy**: Sandboxed, with files processed entirely on this Mac. The only network request is the optional GitHub release check on launch and once a day. No account, no analytics, no telemetry, no uploads.
 
 ---
 
@@ -123,7 +123,7 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 | Feature | DragConvert | Tangerine ($29.99) | Cloud Converters |
 | :--- | :---: | :---: | :---: |
 | **Price** | **Free & Open Source (GPL-3.0)** | $29.99 (20-file trial) | Subscription / Ad-supported |
-| **Privacy** | **100% Local (0 Network Entitlement)** | Policy promise | Uploaded to remote servers |
+| **Privacy** | **Local files · optional GitHub update check** | Policy promise | Uploaded to remote servers |
 | **Latency** | **< 80 ms (Hardware Accelerated)** | Micro-lags reported | Depends on upload/download speed |
 | **Interaction** | **Radial Wheel + Keyboard (1–9)** | Radial Wheel | Drag into browser tab |
 | **Architecture** | **Native Swift 6 + AppKit** | Native Swift | Web / Electron |
@@ -131,6 +131,19 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 | **Auditability** | **Full Source Available** | Closed Source | Closed Source |
 
 ---
+
+## What’s new in 0.8.0
+
+- **More Tools palette**: annotate, add/remove background, photo editor and QR reading for images; annotate, redact, add background and crop for PDFs. A seventh **More** wedge opens the palette, so the six-item tools ring stays clean.
+- **More Formats palette**: when a family has more than seven working outputs, the dial shows six formats plus **More** instead of cramming or hiding the rest.
+- **Archive extraction**: ZIP, TAR, GZIP, RAR and 7-Zip extract to a folder beside the archive. RAR is read-only; RAR creation is proprietary.
+- **PDF → BMP**, plus PDF → DOCX, HTML, RTF, RTFD, EPUB and SVG.
+- **Document engine**: TXT, Markdown, HTML, RTF, RTFD, DOCX, DOC, ODT and EPUB → PDF, JPG, PNG, TXT, Markdown, HTML, RTF, RTFD, DOCX and EPUB.
+- **Spreadsheet engine**: CSV/TSV ⇄ XLSX/ODS and CSV/TSV → PDF, with quoted fields, embedded commas and multi-line cells.
+- **Media engine**: audio → M4A, WAV, AIFF and FLAC; video MP4/MOV/M4V → MP4, MOV, M4V, M4A and GIF. This uses macOS’s own `afconvert`, `avconvert` and AVFoundation encoders, so no external download is required.
+- **Updates card** in About: automatic GitHub release check on launch and once a day, live status, **Check Again**, **View Release**, and a clear no-account/no-tracking note.
+
+MP3, Ogg Vorbis, WMA, MKV, WEBM, AVI and WMV still need a bundled FFmpeg-class encoder; those targets are not shown until an engine exists.
 
 ## What’s new in 0.7.1
 
@@ -142,7 +155,7 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 - **Appearance section**, 30 pt content margins, compact rows, brown modifier pills and a fixed Quit footer in General.
 - **Compact dark glass HUD** for progress, success and failure.
 
-The format registry and settings are complete. Local conversion engines ship for images (including WebP, AVIF, RAW and SVG input), PDF (including PDF/A-2B and QR), subtitles and archives. Document, spreadsheet, audio and video engines are the next family and are marked accordingly in the app.
+The format registry and settings are complete. Local conversion engines ship for images (including WebP, AVIF, RAW and SVG input), PDF (including PDF/A-2B, OCR, DOCX, HTML, RTF, RTFD, EPUB and SVG), documents, spreadsheets, audio, video, subtitles and archives. Presentation conversion and legacy media containers still need a bundled FFmpeg/LibreOffice-class engine and are marked accordingly in the app.
 
 ### Packaging fix in 0.7.1
 
