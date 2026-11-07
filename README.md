@@ -52,15 +52,62 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 
 ---
 
-## Keyboard Reference
+## Installation
 
-| Key | Action |
-|---|---|
-| <kbd>1</kbd>–<kbd>9</kbd> | Jump directly to a numbered wedge. The 7th wedge opens **More** when a family has extra tools or formats. |
-| <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> | Cycle wedges clockwise or counter-clockwise |
-| <kbd>Return</kbd> | Confirm the hovered wedge |
-| <kbd>Esc</kbd> | Cancel and dismiss the wheel |
-| <kbd>⌘</kbd> <kbd>,</kbd> | Open Settings while the wheel is open |
+### Option 1: Homebrew (Recommended)
+
+On **Homebrew 7**, trust the tap once and install:
+
+```bash
+brew trust j4yop/tap && brew install --cask j4yop/tap/dragconvert
+```
+
+On older Homebrew versions this is enough:
+
+```bash
+brew install --cask j4yop/tap/dragconvert
+```
+
+The cask installs `DragConvert.app` into `/Applications` and clears the quarantine flag automatically, so you can open it right away. If macOS still asks for confirmation, use **System Settings → Privacy & Security → Open Anyway** once.
+
+### Option 2: Build From Source
+
+```bash
+git clone https://github.com/j4yop/DragConvert.git ~/Developer/DragConvert
+cd ~/Developer/DragConvert
+make install
+```
+
+`make install` builds the app, signs it with entitlements, installs it to `/Applications/DragConvert.app`, and refreshes macOS LaunchServices so the orange wheel icon appears in Spotlight and Launchpad.
+
+### Option 3: DMG (Manual Download)
+
+Download the latest **`DragConvert-<version>.dmg`** from [Releases](https://github.com/j4yop/DragConvert/releases). Open it, drag `DragConvert.app` into Applications, and launch it. The DMG contains a Read Me and a **Fix Gatekeeper.command** helper.
+
+The app is universal (Apple Silicon and Intel) and ad-hoc signed, but not notarized. If macOS says the app is damaged or cannot be opened, run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/DragConvert.app
+open /Applications/DragConvert.app
+```
+
+You can also right-click the app and choose **Open** twice. A ZIP is still published for people who prefer it.
+
+### Development Build
+
+```bash
+make run
+```
+
+Runs the application directly from the local `build/` directory.
+
+### Live Diagnostic Logs
+
+Curious what DragConvert sees mid-drag? Stream the real-time event pipeline:
+
+```bash
+make log
+```
 
 ---
 
@@ -185,63 +232,6 @@ The format registry and settings are complete. Local conversion engines ship for
 - The bundled `cwebp` helper is universal too.
 - The DMG/ZIP are still ad-hoc signed rather than notarized because no Developer ID certificate is available in this build environment.
 
-## Installation
-
-### Option 1: Homebrew (Recommended)
-
-On **Homebrew 7**, trust the tap once and install:
-
-```bash
-brew trust j4yop/tap && brew install --cask j4yop/tap/dragconvert
-```
-
-On older Homebrew versions this is enough:
-
-```bash
-brew install --cask j4yop/tap/dragconvert
-```
-
-The cask installs `DragConvert.app` into `/Applications` and clears the quarantine flag automatically, so you can open it right away. If macOS still asks for confirmation, use **System Settings → Privacy & Security → Open Anyway** once.
-
-### Option 2: Build From Source
-
-```bash
-git clone https://github.com/j4yop/DragConvert.git ~/Developer/DragConvert
-cd ~/Developer/DragConvert
-make install
-```
-
-`make install` builds the app, signs it with entitlements, installs it to `/Applications/DragConvert.app`, and refreshes macOS LaunchServices so the orange wheel icon appears in Spotlight and Launchpad.
-
-### Option 3: DMG (Manual Download)
-
-Download the latest **`DragConvert-<version>.dmg`** from [Releases](https://github.com/j4yop/DragConvert/releases). Open it, drag `DragConvert.app` into Applications, and launch it. The DMG contains a Read Me and a **Fix Gatekeeper.command** helper.
-
-The app is universal (Apple Silicon and Intel) and ad-hoc signed, but not notarized. If macOS says the app is damaged or cannot be opened, run:
-
-```bash
-xattr -dr com.apple.quarantine /Applications/DragConvert.app
-open /Applications/DragConvert.app
-```
-
-You can also right-click the app and choose **Open** twice. A ZIP is still published for people who prefer it.
-
-### Development Build
-
-```bash
-make run
-```
-
-Runs the application directly from the local `build/` directory.
-
-### Live Diagnostic Logs
-
-Curious what DragConvert sees mid-drag? Stream the real-time event pipeline:
-
-```bash
-make log
-```
-
 ---
 
 ## Permissions & The App Sandbox
@@ -249,6 +239,17 @@ make log
 DragConvert is sandboxed from day one. When you drag a file into an app, macOS only grants access to that specific file—not its parent directory.
 
 To allow DragConvert to write the converted result **right next to the original**, the app requests **Folder Access** once upon onboarding. This creates a secure, sandboxed, app-scoped bookmark stored locally in `UserDefaults`. DragConvert **never asks for Full Disk Access or Accessibility permissions**.
+
+---
+
+## Keyboard Reference
+
+```
+  [1] [2] [3] [4] [5] [6] [7] [8] [9]  ──> Jump directly to wedge
+  [←] [→] [↑] [↓]                      ──> Cycle wedges clockwise / counter-clockwise
+  [Enter / Return]                     ──> Confirm selection
+  [Escape]                             ──> Cancel and dismiss wheel
+```
 
 ---
 
