@@ -52,6 +52,18 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 
 ---
 
+## Keyboard Reference
+
+| Key | Action |
+|---|---|
+| <kbd>1</kbd>–<kbd>9</kbd> | Jump directly to a numbered wedge. The 7th wedge opens **More** when a family has extra tools or formats. |
+| <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> | Cycle wedges clockwise or counter-clockwise |
+| <kbd>Return</kbd> | Confirm the hovered wedge |
+| <kbd>Esc</kbd> | Cancel and dismiss the wheel |
+| <kbd>⌘</kbd> <kbd>,</kbd> | Open Settings while the wheel is open |
+
+---
+
 ## Key Features
 
 ### 🎯 Mid-Drag Format Conversion (`⇧ Shift`)
@@ -237,17 +249,6 @@ make log
 DragConvert is sandboxed from day one. When you drag a file into an app, macOS only grants access to that specific file—not its parent directory.
 
 To allow DragConvert to write the converted result **right next to the original**, the app requests **Folder Access** once upon onboarding. This creates a secure, sandboxed, app-scoped bookmark stored locally in `UserDefaults`. DragConvert **never asks for Full Disk Access or Accessibility permissions**.
-
----
-
-## Keyboard Reference
-
-```
-  [1] [2] [3] [4] [5] [6] [7] [8] [9]  ──> Jump directly to wedge
-  [←] [→] [↑] [↓]                      ──> Cycle wedges clockwise / counter-clockwise
-  [Enter / Return]                     ──> Confirm selection
-  [Escape]                             ──> Cancel and dismiss wheel
-```
 
 ---
 
