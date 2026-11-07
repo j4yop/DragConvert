@@ -37,8 +37,11 @@ struct ArchiveEngine: Engine {
     /// Extracts an archive beside itself into a new folder and returns that
     /// folder. Supports ZIP, TAR, GZIP, RAR and 7-Zip through the system
     /// libarchive-backed `bsdtar`; RAR creation is deliberately not offered.
-    static func extractArchive(_ input: URL) throws -> URL {
-        let destination = extractionDestination(for: input)
+    static func extractArchive(
+        _ input: URL,
+        into directory: URL? = nil
+    ) throws -> URL {
+        let destination = extractionDestination(for: input, in: directory)
         try FileManager.default.createDirectory(
             at: destination,
             withIntermediateDirectories: true
@@ -52,8 +55,11 @@ struct ArchiveEngine: Engine {
         return destination
     }
 
-    static func extractionDestination(for input: URL) -> URL {
-        let directory = input.deletingLastPathComponent()
+    static func extractionDestination(
+        for input: URL,
+        in destinationDirectory: URL? = nil
+    ) -> URL {
+        let directory = destinationDirectory ?? input.deletingLastPathComponent()
         let base = input.deletingPathExtension().lastPathComponent
         var candidate = directory.appendingPathComponent(base, isDirectory: true)
         var index = 2
@@ -110,9 +116,20 @@ struct ArchiveEngine: Engine {
     }
 
     private static func archive(_ directory: URL, to output: URL, format: String) throws {
+        let level: String
+        switch ConversionDefaults.archiveCompression(for: format) {
+        case "fast": level = "1"
+        case "smallest": level = "9"
+        default: level = "6"
+        }
+
         switch format.lowercased() {
         case "zip":
-            try run("/usr/bin/zip", ["-r", "-q", output.path, "."], cwd: directory)
+            try run(
+                "/usr/bin/zip",
+                ["-r", "-q", "-\(level)", output.path, "."],
+                cwd: directory
+            )
         case "tar":
             try run("/usr/bin/tar", ["-cf", output.path, "-C", directory.path, "."])
         case "gz":
@@ -120,7 +137,7 @@ struct ArchiveEngine: Engine {
                 .appendingPathComponent(UUID().uuidString + ".tar")
             defer { try? FileManager.default.removeItem(at: tar) }
             try run("/usr/bin/tar", ["-cf", tar.path, "-C", directory.path, "."])
-            let data = try pipe("/usr/bin/gzip", ["-c", tar.path])
+            let data = try pipe("/usr/bin/gzip", ["-\(level)", "-c", tar.path])
             try data.write(to: output)
         default:
             throw EngineError.unsupported(format)

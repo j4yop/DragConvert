@@ -4,7 +4,11 @@ import JobCore
 enum SpreadsheetFile {
     // MARK: XLSX writer
 
-    static func writeXLSX(_ rows: [[String]], to url: URL) throws {
+    static func writeXLSX(
+        _ rows: [[String]],
+        to url: URL,
+        detectNumbers: Bool = true
+    ) throws {
         let content = rows.isEmpty ? [[""]] : rows
         var zip = ZipWriter()
 
@@ -55,7 +59,7 @@ enum SpreadsheetFile {
             let cells = row.enumerated().map { columnIndex, value in
                 let reference = "\(columnName(columnIndex))\(rowIndex + 1)"
                 let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-                if isNumber(trimmed) {
+                if detectNumbers, isNumber(trimmed) {
                     return "<c r=\"\(reference)\"><v>\(trimmed)</v></c>"
                 }
                 return "<c r=\"\(reference)\" t=\"inlineStr\"><is><t xml:space=\"preserve\">\(escape(value))</t></is></c>"
@@ -77,12 +81,16 @@ enum SpreadsheetFile {
 
     // MARK: ODS writer
 
-    static func writeODS(_ rows: [[String]], to url: URL) throws {
+    static func writeODS(
+        _ rows: [[String]],
+        to url: URL,
+        detectNumbers: Bool = true
+    ) throws {
         let content = rows.isEmpty ? [[""]] : rows
         let body = content.map { row in
             let cells = row.map { value -> String in
                 let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-                if isNumber(trimmed) {
+                if detectNumbers, isNumber(trimmed) {
                     return """
                     <table:table-cell office:value-type="float" office:value="\(trimmed)"><text:p>\(escape(trimmed))</text:p></table:table-cell>
                     """

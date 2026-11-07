@@ -51,6 +51,7 @@ struct SettingsView: View {
     @AppStorage("showMenuBarIcon") private var showMenuBar = true
     @AppStorage("terminalBundleID") private var terminal = TerminalApps.selectedBundleID
     @AppStorage("floatBehavior") private var floatBehavior = "Create a New Float"
+    @AppStorage("archiveExtractionDestination") private var archiveDestination = "beside"
     @AppStorage("checkForUpdatesAutomatically") private var autoUpdates = true
 
     @ObservedObject private var updates = UpdateChecker.shared
@@ -73,8 +74,8 @@ struct SettingsView: View {
     }
 
     private var version: String {
-        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.8.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "10"
+        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.8.1"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "11"
         return "Version \(short) (\(build))"
     }
 
@@ -211,13 +212,28 @@ struct SettingsView: View {
                     .font(.system(size: 10.5))
                     .foregroundStyle(Color.white.opacity(0.42))
                     .padding(.top, 4)
+
+                Text("Wheel keys: 1–9 choose · arrows cycle · Return applies · Esc dismisses")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Color.white.opacity(0.52))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+
+                Text("⌘, Settings · the 7th wedge opens More tools or formats.")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Color.white.opacity(0.42))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 1)
                     .padding(.bottom, 8)
 
                 divider
                 menuRow(
                     "Float Behaviour",
                     selection: $floatBehavior,
-                    options: ["Create a New Float", "Add to Existing Float"],
+                    options: [
+                        PopupOption(id: "Create a New Float", title: "Create a New Float"),
+                        PopupOption(id: "Add to Existing Float", title: "Add to Existing Float")
+                    ],
                     width: 235
                 )
                 divider
@@ -323,7 +339,7 @@ struct SettingsView: View {
     private func menuRow(
         _ title: String,
         selection: Binding<String>,
-        options: [String],
+        options: [PopupOption],
         width: CGFloat
     ) -> some View {
         HStack(spacing: 12) {
@@ -332,9 +348,10 @@ struct SettingsView: View {
                 .foregroundStyle(Color.white.opacity(0.92))
             Spacer(minLength: 8)
             PopupControl(
-                title: selection.wrappedValue,
+                title: options.first(where: { $0.id == selection.wrappedValue })?.title
+                    ?? selection.wrappedValue,
                 width: width,
-                options: options.map { PopupOption(id: $0, title: $0) },
+                options: options,
                 fontSize: 13,
                 background: Color(red: 0.24, green: 0.13, blue: 0.09),
                 onSelect: { selection.wrappedValue = $0 }
@@ -632,6 +649,13 @@ struct SettingsView: View {
                     )
                 }
             }
+            if selectedFormatInfo.settings.spreadsheetNumbers {
+                checkRow("Detect numbers in cells", isOn: bind(\.spreadsheetNumbers))
+                Text("Keep values such as 42 numeric. Turn off to preserve every cell as text.")
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(Color.white.opacity(0.42))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if selectedFormatInfo.settings.epubLayout {
                 settingRow("EPUB layout") {
                     PopupControl(
@@ -870,6 +894,7 @@ struct SettingsView: View {
         profile.gifFrameRate = d.string(forKey: p + "gifFrameRate") ?? "original"
         profile.gifMaxWidth = d.string(forKey: p + "gifMaxWidth") ?? "original"
         profile.epubLayout = d.string(forKey: p + "epubLayout") ?? "editable"
+        profile.spreadsheetNumbers = d.object(forKey: p + "spreadsheetNumbers") as? Bool ?? true
     }
 
     private func saveProfile() {
@@ -889,6 +914,7 @@ struct SettingsView: View {
         d.set(profile.gifFrameRate, forKey: p + "gifFrameRate")
         d.set(profile.gifMaxWidth, forKey: p + "gifMaxWidth")
         d.set(profile.epubLayout, forKey: p + "epubLayout")
+        d.set(profile.spreadsheetNumbers, forKey: p + "spreadsheetNumbers")
     }
 
     private func bind<T>(_ keyPath: WritableKeyPath<FormatProfileValues, T>) -> Binding<T> {
@@ -913,6 +939,7 @@ struct SettingsView: View {
         profile.gifFrameRate = "original"
         profile.gifMaxWidth = "original"
         profile.epubLayout = "editable"
+        profile.spreadsheetNumbers = true
         saveProfile()
     }
 
@@ -1095,6 +1122,27 @@ struct SettingsView: View {
                 .frame(height: 30)
             }
 
+            Text("Extraction")
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.84))
+
+            groupBox {
+                menuRow(
+                    "Archive destination",
+                    selection: $archiveDestination,
+                    options: [
+                        PopupOption(id: "beside", title: "Beside the archive"),
+                        PopupOption(id: "ask", title: "Ask for a folder")
+                    ],
+                    width: 190
+                )
+                Text("ZIP, TAR, GZIP, RAR and 7-Zip always extract into a new folder so existing files are never overwritten.")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Color.white.opacity(0.42))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 4)
+            }
+
             Spacer(minLength: 0)
         }
         .frame(height: 470, alignment: .top)
@@ -1132,7 +1180,7 @@ struct SettingsView: View {
                 .padding(.top, 1)
 
             groupBox {
-                aboutLine("Formats", "7 families · 47 formats")
+                aboutLine("Formats", "7 families · 48 formats")
                 divider
                 aboutLine("Wheel", "Up to 7 conversions · 7 tools · 6 actions")
                 divider

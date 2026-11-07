@@ -1126,6 +1126,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         _ = FolderAccess.shared.ensureAccess()
 
+        var destinationRoot: URL?
+        if UserDefaults.standard.string(forKey: "archiveExtractionDestination") == "ask" {
+            let panel = NSOpenPanel()
+            panel.canChooseFiles = false
+            panel.canChooseDirectories = true
+            panel.allowsMultipleSelection = false
+            panel.message = "Choose a folder for the extracted archives."
+            panel.prompt = "Extract Here"
+            guard panel.runModal() == .OK, let folder = panel.url else { return }
+            destinationRoot = folder
+        }
+
         hud.onCancel = { [weak self] in self?.extractTask?.cancel() }
         hud.show(
             title: "Extracting archive",
@@ -1147,7 +1159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 do {
                     let folder = try await Task.detached(priority: .userInitiated) {
-                        try ArchiveEngine.extractArchive(input)
+                        try ArchiveEngine.extractArchive(input, into: destinationRoot)
                     }.value
                     outputs.append(folder)
                 } catch is CancellationError {

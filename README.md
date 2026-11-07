@@ -132,6 +132,15 @@ Customizable shortcuts let you summon three distinct, context-aware radial wheel
 
 ---
 
+## What’s new in 0.8.1
+
+- **Settings now drive the new engines.** Audio bitrate and PCM bit depth, video quality/maximum height/compression, GIF frame rate/maximum width, archive compression, and spreadsheet number detection are read by the converters that perform the work.
+- **Wheel key bindings are documented in General**: **1–9** choose a wedge, arrows cycle, **Return** applies, **Esc** dismisses, and **⌘,** opens Settings. The seventh wedge opens **More** when a family has extra tools or formats.
+- **Archive destination** is now a real option in **Folders**: extract beside the archive or choose a folder for each run. RAR and 7-Zip remain extract-only.
+- **M4V** is in the format catalog; the About card now reports **48 formats**.
+- **New spreadsheet option**: turn off **Detect numbers in cells** to preserve values such as `00123` as text.
+- **No fake controls**: GIF settings show only frame rate and width, and audio depth is reserved for PCM outputs.
+
 ## What’s new in 0.8.0
 
 - **More Tools palette**: annotate, add/remove background, photo editor and QR reading for images; annotate, redact, add background and crop for PDFs. A seventh **More** wedge opens the palette, so the six-item tools ring stays clean.

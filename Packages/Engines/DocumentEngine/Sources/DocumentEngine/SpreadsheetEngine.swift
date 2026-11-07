@@ -36,13 +36,21 @@ public struct SpreadsheetEngine: Engine {
         switch target {
         case "xlsx":
             let output = DestinationPolicy.outputURL(for: input, extension: "xlsx")
-            try SpreadsheetFile.writeXLSX(rows, to: output)
+            try SpreadsheetFile.writeXLSX(
+                rows,
+                to: output,
+                detectNumbers: ConversionDefaults.detectsSpreadsheetNumbers(for: "xlsx")
+            )
             progress(1)
             return [output]
 
         case "ods":
             let output = DestinationPolicy.outputURL(for: input, extension: "ods")
-            try SpreadsheetFile.writeODS(rows, to: output)
+            try SpreadsheetFile.writeODS(
+                rows,
+                to: output,
+                detectNumbers: ConversionDefaults.detectsSpreadsheetNumbers(for: "ods")
+            )
             progress(1)
             return [output]
 

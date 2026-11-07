@@ -473,6 +473,27 @@ public enum ConversionDefaults {
         UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).compression") ?? "balanced"
     }
 
+    public static func gifFrameRate(for ext: String) -> String {
+        UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).gifFrameRate") ?? "original"
+    }
+
+    public static func gifMaxWidth(for ext: String) -> Int? {
+        let raw = UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).gifMaxWidth") ?? "original"
+        return raw == "original" ? nil : Int(raw)
+    }
+
+    public static func detectsSpreadsheetNumbers(for ext: String) -> Bool {
+        UserDefaults.standard.object(forKey: "conversionProfile.\(normalised(ext)).spreadsheetNumbers") as? Bool ?? true
+    }
+
+    public static func pdfLayout(for ext: String) -> String {
+        UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).pdfOfficeLayout") ?? "editable"
+    }
+
+    public static func epubLayout(for ext: String) -> String {
+        UserDefaults.standard.string(forKey: "conversionProfile.\(normalised(ext)).epubLayout") ?? "editable"
+    }
+
     private static func normalised(_ ext: String) -> String {
         switch ext.lowercased() {
         case "jpeg": return "jpg"

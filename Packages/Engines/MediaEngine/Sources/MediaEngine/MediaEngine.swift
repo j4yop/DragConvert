@@ -47,12 +47,15 @@ public struct AudioEngine: Engine {
             var arguments: [String] = []
             switch target {
             case "m4a":
-                arguments = ["-f", "m4af", "-d", "aac", "-b", "192000"]
-            case "wav":
-                arguments = ["-f", "WAVE", "-d", "LEI16"]
-            case "aiff":
-                arguments = ["-f", "AIFF", "-d", "BEI16"]
+                let kbps = Self.bitrateKbps(for: target, input: input)
+                arguments = ["-f", "m4af", "-d", "aac", "-b", "\(kbps * 1_000)"]
+            case "wav", "aiff":
+                arguments = [
+                    "-f", target == "aiff" ? "AIFF" : "WAVE",
+                    "-d", Self.pcmFormat(for: target)
+                ]
             case "flac":
+                // FLAC is lossless; a bitrate/depth control would be misleading.
                 arguments = ["-f", "flac", "-d", "flac"]
             default:
                 throw EngineError.unsupported("audio → \(target)")
@@ -63,6 +66,30 @@ public struct AudioEngine: Engine {
 
         progress(1)
         return [output]
+    }
+
+    private static func bitrateKbps(for target: String, input: URL? = nil) -> Int {
+        let raw = ConversionDefaults.audioBitrate(for: target)
+        let number = Int(raw.split(separator: " ").first ?? "") ?? 256
+        var kbps = min(max(number, 64), 320)
+        // AAC rejects 320 kbps for mono at 44.1 kHz; 256 is the safe ceiling.
+        if let input,
+           let file = try? AVAudioFile(forReading: input),
+           file.processingFormat.channelCount <= 1 {
+            kbps = min(kbps, 256)
+        }
+        return kbps
+    }
+
+    private static func pcmFormat(for target: String) -> String {
+        let depth = ConversionDefaults.audioDepth(for: target)
+        let bigEndian = target == "aiff"
+        switch depth {
+        case "24": return bigEndian ? "BEI24" : "LEI24"
+        case "32": return bigEndian ? "BEI32" : "LEI32"
+        case "float32": return bigEndian ? "BEF32" : "LEF32"
+        default: return bigEndian ? "BEI16" : "LEI16"
+        }
     }
 }
 
@@ -104,14 +131,28 @@ public struct VideoEngine: Engine {
 
         if target == "gif" {
             try await makeGIF(input: input, output: output, progress: progress)
-        } else {
+        } else if target == "m4a" {
             try MediaProcess.write(to: output, extension: target) { temporary in
-                let preset = target == "m4a"
-                    ? "PresetAppleM4A"
-                    : "PresetHighestQuality"
+                let intermediate = temporary.deletingLastPathComponent()
+                    .appendingPathComponent(".\(UUID().uuidString).m4a")
+                defer { try? FileManager.default.removeItem(at: intermediate) }
                 try MediaProcess.run("/usr/bin/avconvert", [
                     "--source", input.path,
-                    "--preset", preset,
+                    "--preset", "PresetAppleM4A",
+                    "--output", intermediate.path,
+                    "--replace"
+                ])
+                let kbps = Self.bitrateKbps(for: "m4a")
+                try MediaProcess.run("/usr/bin/afconvert", [
+                    "-f", "m4af", "-d", "aac", "-b", "\(kbps * 1_000)",
+                    intermediate.path, temporary.path
+                ])
+            }
+        } else {
+            try MediaProcess.write(to: output, extension: target) { temporary in
+                try MediaProcess.run("/usr/bin/avconvert", [
+                    "--source", input.path,
+                    "--preset", Self.preset(for: target),
                     "--output", temporary.path,
                     "--replace"
                 ])
@@ -130,12 +171,25 @@ public struct VideoEngine: Engine {
         let asset = AVURLAsset(url: input)
         let duration = try await asset.load(.duration)
         let seconds = max(0.1, duration.seconds)
-        let framesPerSecond = 10.0
-        let frameCount = max(1, min(240, Int(seconds * framesPerSecond)))
+        let requestedFPS: Double
+        switch ConversionDefaults.gifFrameRate(for: "gif") {
+        case "30": requestedFPS = 30
+        case "15": requestedFPS = 15
+        default: requestedFPS = 10
+        }
+        let frameCount = max(1, min(300, Int(seconds * requestedFPS)))
+        let framesPerSecond = Double(frameCount) / seconds
 
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 640, height: 640)
+        if let maxWidth = ConversionDefaults.gifMaxWidth(for: "gif") {
+            generator.maximumSize = CGSize(
+                width: CGFloat(maxWidth),
+                height: CGFloat(maxWidth)
+            )
+        } else {
+            generator.maximumSize = .zero
+        }
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
 
@@ -183,6 +237,37 @@ public struct VideoEngine: Engine {
                 throw EngineError.writeFailed("the GIF encoder rejected the frames")
             }
         }
+    }
+
+    private static func preset(for target: String) -> String {
+        let quality = ConversionDefaults.videoQuality(for: target)
+        let compression = ConversionDefaults.videoCompression(for: target)
+        var height = ConversionDefaults.videoMaxHeight(for: target)
+
+        if height == nil {
+            switch quality {
+            case "smallerFile": height = 720
+            case "higherQuality": height = nil
+            default: height = 1080
+            }
+        }
+        if compression == "strong", let current = height {
+            height = min(current, 720)
+        }
+
+        switch height {
+        case 2160: return "Preset3840x2160"
+        case 1080: return "Preset1920x1080"
+        case 720: return "Preset1280x720"
+        case 480: return "Preset640x480"
+        default: return "PresetHighestQuality"
+        }
+    }
+
+    private static func bitrateKbps(for target: String) -> Int {
+        let raw = ConversionDefaults.audioBitrate(for: target)
+        let number = Int(raw.split(separator: " ").first ?? "") ?? 256
+        return min(max(number, 64), 320)
     }
 }
 

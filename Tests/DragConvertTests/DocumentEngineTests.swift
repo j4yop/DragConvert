@@ -51,6 +51,32 @@ final class DocumentEngineTests: XCTestCase {
         XCTAssertTrue(text.contains("Grace\t96"), text)
     }
 
+    func testSpreadsheetNumberDetectionSetting() async throws {
+        let key = "conversionProfile.xlsx.spreadsheetNumbers"
+        UserDefaults.standard.set(false, forKey: key)
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+
+        let directory = try makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = directory.appendingPathComponent("codes.csv")
+        try "Code,Count\n00123,42\n".write(
+            to: source, atomically: true, encoding: .utf8
+        )
+
+        let xlsx = try await SpreadsheetEngine().run(
+            Job(inputs: [source], operation: .convert(to: "xlsx"))
+        ) { _ in }[0]
+
+        guard let archive = ZipReader(url: xlsx),
+              let sheet = archive.readText("xl/worksheets/sheet1.xml") else {
+            return XCTFail("could not inspect the workbook")
+        }
+        XCTAssertTrue(sheet.contains("00123"), sheet)
+        XCTAssertFalse(sheet.contains("<v>00123</v>"), sheet)
+        XCTAssertFalse(sheet.contains("<v>42</v>"), sheet)
+        XCTAssertFalse(ConversionDefaults.detectsSpreadsheetNumbers(for: "xlsx"))
+    }
+
     func testTextDocumentToPDFAndImages() async throws {
         let directory = try makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

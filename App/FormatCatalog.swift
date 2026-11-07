@@ -44,12 +44,13 @@ struct FormatSettings: Hashable {
     var gifOptions = false
     var epubLayout = false
     var spreadsheetOptions = false
+    var spreadsheetNumbers = false
 
     var any: Bool {
         quality || metadata || imageCompression || pdfLayout
             || audioBitrate || audioDepth || videoQuality || videoHeight
             || videoCompression || archiveCompression || gifOptions
-            || epubLayout || spreadsheetOptions
+            || epubLayout || spreadsheetOptions || spreadsheetNumbers
     }
 }
 
@@ -178,15 +179,15 @@ enum FormatCatalog {
 
     static let spreadsheets: [FormatSpec] = [
         spec("xlsx", "XLSX", .spreadsheets, input: true,
-             outputs: ["ods", "csv", "tsv", "pdf"], settings: .init(), ext: ["xlsx"]),
+             outputs: ["ods", "csv", "tsv", "pdf"], settings: .init(spreadsheetNumbers: true), ext: ["xlsx"]),
         spec("xls", "XLS", .spreadsheets, input: true,
-             outputs: ["xlsx", "ods", "csv", "tsv", "pdf"], settings: .init(), ext: ["xls"]),
+             outputs: ["xlsx", "ods", "csv", "tsv", "pdf"], settings: .init(spreadsheetNumbers: true), ext: ["xls"]),
         spec("ods", "ODS", .spreadsheets, input: true,
-             outputs: ["xlsx", "xls", "csv", "tsv", "pdf"], settings: .init(), ext: ["ods"]),
+             outputs: ["xlsx", "xls", "csv", "tsv", "pdf"], settings: .init(spreadsheetNumbers: true), ext: ["ods"]),
         spec("csv", "CSV", .spreadsheets, input: true,
-             outputs: ["xlsx", "xls", "ods", "tsv", "pdf"], settings: .init(), ext: ["csv"]),
+             outputs: ["xlsx", "xls", "ods", "tsv", "pdf"], settings: .init(spreadsheetNumbers: true), ext: ["csv"]),
         spec("tsv", "TSV", .spreadsheets, input: true,
-             outputs: ["xlsx", "xls", "ods", "csv", "pdf"], settings: .init(), ext: ["tsv"])
+             outputs: ["xlsx", "xls", "ods", "csv", "pdf"], settings: .init(spreadsheetNumbers: true), ext: ["tsv"])
     ]
 
     static let audio: [FormatSpec] = [
@@ -218,26 +219,29 @@ enum FormatCatalog {
 
     static let video: [FormatSpec] = [
         spec("mp4", "MP4", .video, input: true,
-             outputs: ["mov", "mkv", "webm", "avi", "wmv", "gif", "mp3"],
+             outputs: ["mov", "m4v", "m4a", "gif", "mkv", "webm", "avi", "wmv"],
              settings: .init(videoQuality: true, videoHeight: true, videoCompression: true), ext: ["mp4"]),
         spec("mov", "MOV", .video, input: true,
-             outputs: ["mp4", "mkv", "webm", "avi", "wmv", "gif", "mp3"],
+             outputs: ["mp4", "m4v", "m4a", "gif", "mkv", "webm", "avi", "wmv"],
              settings: .init(videoQuality: true, videoHeight: true, videoCompression: true), ext: ["mov"]),
+        spec("m4v", "M4V", .video, input: true,
+             outputs: ["mp4", "mov", "m4a", "gif", "mkv", "webm", "avi", "wmv"],
+             settings: .init(videoQuality: true, videoHeight: true, videoCompression: true), ext: ["m4v"]),
         spec("mkv", "MKV", .video, input: true,
-             outputs: ["mp4", "mov", "webm", "avi", "wmv", "gif", "mp3"],
+             outputs: ["mp4", "mov", "m4v", "m4a", "gif", "webm", "avi", "wmv"],
              settings: .init(videoQuality: true, videoHeight: true, videoCompression: true), ext: ["mkv"]),
         spec("webm", "WEBM", .video, input: true,
-             outputs: ["mp4", "mov", "mkv", "avi", "wmv", "gif", "mp3"],
+             outputs: ["mp4", "mov", "m4v", "m4a", "gif", "mkv", "avi", "wmv"],
              settings: .init(videoQuality: true, videoHeight: true, videoCompression: true), ext: ["webm"]),
         spec("avi", "AVI", .video, input: true,
-             outputs: ["mp4", "mov", "mkv", "webm", "wmv", "gif", "mp3"],
+             outputs: ["mp4", "mov", "m4v", "m4a", "gif", "mkv", "webm", "wmv"],
              settings: .init(videoQuality: true, videoHeight: true, videoCompression: true), ext: ["avi"]),
         spec("wmv", "WMV", .video, input: true,
-             outputs: ["mp4", "mov", "mkv", "webm", "avi", "gif", "mp3"],
+             outputs: ["mp4", "mov", "m4v", "m4a", "gif", "mkv", "webm", "avi"],
              settings: .init(videoQuality: true, videoHeight: true, videoCompression: true), ext: ["wmv"]),
         spec("gif", "GIF", .video, input: true,
-             outputs: ["mp4", "mov", "mkv", "webm", "avi", "wmv", "mp3"],
-             settings: .init(videoQuality: true, videoHeight: true, videoCompression: true, gifOptions: true), ext: ["gif"])
+             outputs: ["mp4", "mov", "m4v", "m4a", "mkv", "webm", "avi", "wmv"],
+             settings: .init(gifOptions: true), ext: ["gif"])
     ]
 
     static let archives: [FormatSpec] = [
@@ -312,4 +316,5 @@ struct FormatProfileValues: Equatable {
     var gifFrameRate = "original"
     var gifMaxWidth = "original"
     var epubLayout = "editable"
+    var spreadsheetNumbers = true
 }

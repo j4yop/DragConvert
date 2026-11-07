@@ -34,6 +34,49 @@ final class MediaEngineTests: XCTestCase {
         XCTAssertGreaterThan(audio.processingFormat.sampleRate, 8_000)
     }
 
+    func testAudioBitrateSettingChangesOutputSize() async throws {
+        let key = "conversionProfile.m4a.audioBitrate"
+        let previous = UserDefaults.standard.string(forKey: key)
+        defer {
+            if let previous {
+                UserDefaults.standard.set(previous, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let input = directory.appendingPathComponent("tone.wav")
+        try makeTone(to: input)
+
+        let engine = AudioEngine()
+        UserDefaults.standard.set("128 kbps", forKey: key)
+        let small = try await engine.run(
+            Job(inputs: [input], operation: .convert(to: "m4a"))
+        ) { _ in }[0]
+
+        UserDefaults.standard.set("320 kbps", forKey: key)
+        let large = try await engine.run(
+            Job(inputs: [input], operation: .convert(to: "m4a"))
+        ) { _ in }[0]
+
+        let smallSize = try FileManager.default
+            .attributesOfItem(atPath: small.path)[.size] as? NSNumber
+        let largeSize = try FileManager.default
+            .attributesOfItem(atPath: large.path)[.size] as? NSNumber
+        XCTAssertGreaterThan(
+            largeSize?.intValue ?? 0,
+            smallSize?.intValue ?? 0,
+            "320 kbps should be larger than 128 kbps"
+        )
+    }
+
     private func makeTone(to url: URL) throws {
         let sampleRate = 44_100
         let seconds = 1
